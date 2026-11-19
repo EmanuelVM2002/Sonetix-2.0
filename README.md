@@ -1,0 +1,39 @@
+# Descubre Medellín · by SONETIX (prototipo de interfaz)
+
+Nombre **provisional**. Prototipo estático (HTML + CSS + JS) del diseño de la plataforma: inicio, mapa interactivo, fichas, barrios, sección comercial de SONETIX y formulario de cotización.
+
+## Cómo verlo
+
+```
+node serve.js 8861
+```
+
+y abre http://localhost:8861 (necesita internet: carga MapLibre desde unpkg y el mapa base desde OpenFreeMap).
+
+## Panel administrativo
+
+`admin.html` (http://localhost:8861/admin.html): resumen con indicadores, tabla de prospectos con puntaje de 100 puntos y evidencia web con fecha y herramienta, embudo tipo tablero, mapa interno de oportunidad, bandeja de solicitudes del sitio público y registro «No contactar». Datos de ejemplo en el navegador (`dm_admin`); sin inicio de sesión, así que **no publicar tal cual**: en producción va detrás de Supabase Auth.
+
+## Archivos
+
+- `admin.html`, `css/admin.css`, `js/admin.js`: panel administrativo.
+- `index.html`: estructura de todas las secciones.
+- `css/style.css`: paleta SONETIX (tokens al inicio), modo oscuro por defecto y modo claro.
+- `js/data.js`: **datos de ejemplo** (negocios, barrios, categorías) y el número de WhatsApp de SONETIX (`SONETIX_WHATSAPP`, vacío).
+- `js/app.js`: mapa, filtros, buscador, fichas, modales, formularios y tema.
+
+## Lo que es de demostración
+
+- Los 36 negocios, sus descripciones y ubicaciones son inventados. Las coordenadas son aproximadas.
+- Los precios de los planes son de referencia, por confirmar.
+- Las solicitudes (cotización, reclamar ficha, retirar negocio) se guardan solo en el navegador (`localStorage`, clave `dm_leads`). No hay servidor.
+- La política de datos es un borrador pendiente de revisión legal.
+- Los términos de uso de OpenFreeMap y de las teselas deben confirmarse antes de lanzar.
+
+## Pendiente para pasar a producción
+
+1. Base de datos real (Supabase + PostGIS) y datos de fuentes de licencia limpia (no copiar de Google Maps ni Instagram).
+2. Flujo real de «Reclamar ficha» con verificación por WhatsApp y consentimiento para fotos.
+3. Panel administrativo de prospectos (ver documento estratégico).
+4. Migrar a Next.js + TypeScript para SEO por barrio y categoría.
+5. Configurar `SONETIX_WHATSAPP`, nombre definitivo y logo.
