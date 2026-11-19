@@ -106,3 +106,52 @@ window.BUSINESSES = [
   b("Café Conuco", "cafe", "pajarito", -0.2, 2.0, { price: 1, desc: "Dos sedes en la ciudad. Brunch, waffles y talleres de repostería.", services: ["Brunch", "Talleres", "Pet friendly"], ig: "cafeconuco" }),
   b("Vive Verde Vivero", "emprend", "pajarito", -1.8, 0.6, { price: 1, claimed: false, desc: "Plantas y accesorios de jardinería." })
 ];
+
+
+/* ============================================================
+   EVENTOS DE EJEMPLO — d = días a partir de hoy (siempre próximos).
+   Los negocios y eventos son ficticios.
+   ============================================================ */
+window.EVENT_TYPES = [
+  { id: "musica",  label: "Música" },
+  { id: "gastro",  label: "Gastronomía" },
+  { id: "promo",   label: "Promociones" },
+  { id: "taller",  label: "Talleres" },
+  { id: "cultura", label: "Cultura" },
+  { id: "deporte", label: "Deportes" }
+];
+
+window.EVENTS = [
+  { id: "e1",  biz: "n13", d: 0, time: "15:00", type: "promo",   price: "2x1 en copas",          title: "Tarde de helados: 2x1 en copas", desc: "Todas las copas de la casa en 2x1 hasta agotar existencias. Pedido por WhatsApp o en el local." },
+  { id: "e2",  biz: "n3",  d: 1, time: "19:00", type: "musica",  price: "Cover $20.000",         title: "Noche de coctelería y música en vivo", desc: "Banda en vivo desde las 9:00 p. m. y carta especial de coctelería de autor. Reserva tu mesa por WhatsApp." },
+  { id: "e3",  biz: "n7",  d: 1, time: "11:00", type: "gastro",  price: "Menú especial",         title: "Brunch con menú especial", desc: "Menú de brunch con opciones vegetarianas, café de filtro y postre de la casa. Pet friendly." },
+  { id: "e4",  biz: "n9",  d: 2, time: "18:30", type: "cultura", price: "Entrada libre",         title: "Club de lectura: cuentos de autores locales", desc: "Esta sesión leemos y conversamos sobre cuentos de escritores de la ciudad. Trae tu café y tu opinión." },
+  { id: "e5",  biz: "n17", d: 2, time: "20:00", type: "deporte", price: "Entrada libre",         title: "Fútbol en pantalla gigante", desc: "Transmitimos el partido de la jornada con tapas y cerveza artesanal en promoción." },
+  { id: "e6",  biz: "n19", d: 3, time: "20:00", type: "cultura", price: "Boleta $25.000",        title: "Noche de comedia en vivo", desc: "Cuatro comediantes locales en una sola noche. Cupos limitados; compra tu boleta en línea." },
+  { id: "e7",  biz: "n35", d: 4, time: "10:00", type: "taller",  price: "$60.000 · cupos limitados", title: "Taller de repostería para principiantes", desc: "Aprende dos recetas desde cero con todos los materiales incluidos. Traes tu delantal y las ganas." },
+  { id: "e8",  biz: "n32", d: 5, time: "16:00", type: "gastro",  price: "Reserva por WhatsApp",  title: "Domingo de parrilla con vista", desc: "Parrilla para compartir, música suave y la mejor vista de la tarde. Ideal para celebraciones." },
+  { id: "e9",  biz: "n14", d: 6, time: "14:00", type: "promo",   price: "Entrada libre",         title: "Feria de ropa vintage: cambia tu prenda", desc: "Trae una prenda en buen estado y cámbiala por otra. Habrá descuentos en accesorios." },
+  { id: "e10", biz: "n26", d: 7, time: "17:00", type: "cultura", price: "Entrada libre",         title: "Inauguración de exposición", desc: "Abrimos una nueva exposición de arte contemporáneo con la presencia de los artistas." },
+  { id: "e11", biz: "n29", d: 9, time: "15:00", type: "promo",   price: "Hasta 30 % de descuento", title: "Tarde de descuentos en nueva colección", desc: "Descuentos escalonados en la nueva colección y ajustes gratis el mismo día." },
+  { id: "e12", biz: "n16", d: 10, time: "16:00", type: "ocio",   price: "Cupos limitados",       title: "Torneo de juegos de mesa", desc: "Equipos de cuatro personas, premios para los ganadores y snacks incluidos." }
+];
+window.EVENT_TYPES.push({ id: "ocio", label: "Planes" });
+
+/* ============================================================
+   RESEÑAS DE EJEMPLO — para mostrar cómo se ve la sección.
+   Se marcan siempre como «Ejemplo». Las reseñas reales llegarán
+   de usuarios con cuenta y pasarán por moderación.
+   ============================================================ */
+window.REVIEWS_SEED = [
+  { biz: "n3",  stars: 5, name: "Visitante de ejemplo", daysAgo: 6,  text: "Buen ambiente y los cocteles muy bien preparados. La vista es lo mejor." },
+  { biz: "n3",  stars: 4, name: "Visitante de ejemplo", daysAgo: 20, text: "Recomendable reservar por WhatsApp porque se llena los viernes." },
+  { biz: "n6",  stars: 5, name: "Visitante de ejemplo", daysAgo: 3,  text: "Pedir con el código QR de la mesa fue muy cómodo y la comida llegó rápido." },
+  { biz: "n7",  stars: 4, name: "Visitante de ejemplo", daysAgo: 12, text: "Brunch rico, opciones vegetarianas y aceptan mascotas." },
+  { biz: "n9",  stars: 5, name: "Visitante de ejemplo", daysAgo: 9,  text: "Librería con mucho encanto. El club de lectura es muy acogedor." },
+  { biz: "n11", stars: 4, name: "Visitante de ejemplo", daysAgo: 15, text: "El almuerzo ejecutivo tiene buena porción y buen precio." },
+  { biz: "n13", stars: 5, name: "Visitante de ejemplo", daysAgo: 2,  text: "Los helados con sabores colombianos son una delicia." },
+  { biz: "n13", stars: 5, name: "Visitante de ejemplo", daysAgo: 30, text: "Hacer el pedido por WhatsApp fue muy fácil." },
+  { biz: "n19", stars: 4, name: "Visitante de ejemplo", daysAgo: 8,  text: "Una noche muy divertida. Llegar temprano para conseguir buen puesto." },
+  { biz: "n32", stars: 5, name: "Visitante de ejemplo", daysAgo: 5,  text: "Celebramos un cumpleaños aquí y la vista fue protagonista." },
+  { biz: "n35", stars: 4, name: "Visitante de ejemplo", daysAgo: 11, text: "Los waffles están muy buenos y el lugar es tranquilo." }
+];

@@ -413,13 +413,13 @@
   const getLeads = () => { try { const a = JSON.parse(store.get('dm_leads') || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
   const putLeads = a => store.set('dm_leads', JSON.stringify(a));
   function renderBadge() { const n = getLeads().filter(l => !l.handled).length; const b = $('#leadBadge'); b.textContent = n; b.hidden = !n; }
-  const LEAD_T = { cotizacion: 'Cotización', reclamo: 'Reclamo de ficha', retiro: 'Retiro' };
+  const LEAD_T = { cotizacion: 'Cotización', reclamo: 'Reclamo de ficha', retiro: 'Retiro', evento: 'Evento por revisar', reporte: 'Reseña reportada' };
   function renderLeads() {
     const L = getLeads();
     $('#leads').innerHTML = L.length ? L.map((l, i) => {
-      const detail = l.type === 'cotizacion' ? `${esc(l.name)} · ${esc(l.phone)} · ${esc(l.service)}${l.msg ? '<br>' + esc(l.msg) : ''}` : l.type === 'reclamo' ? `${esc(l.name)} · ${esc(l.phone)} · ${esc(l.role)}` : `Contacto: ${esc(l.contact)}`;
+      const detail = l.type === 'cotizacion' ? `${esc(l.name)} · ${esc(l.phone)} · ${esc(l.service)}${l.msg ? '<br>' + esc(l.msg) : ''}` : l.type === 'reclamo' ? `${esc(l.name)} · ${esc(l.phone)} · ${esc(l.role)}` : l.type === 'evento' ? `${esc(l.name)} · ${esc(l.phone)}<br><b>${esc(l.title)}</b> · ${esc(l.date)} ${esc(l.time)}${l.desc ? '<br>' + esc(l.desc) : ''}` : l.type === 'reporte' ? `Reseña de «${esc(l.reviewer)}»: ${esc(l.text)}` : `Contacto: ${esc(l.contact)}`;
       return `<li class="lead ${l.handled ? 'done' : ''}"><div class="lh"><span class="tp ${l.type}">${LEAD_T[l.type] || l.type}</span><strong>${esc(l.biz)}</strong><p>${detail}</p><p>${new Date(l.at).toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'medium', timeStyle: 'short' })}${l.handled ? ' · atendida' : ''}</p></div>
-        <div class="la">${l.handled ? '' : `<button class="btn btn-red btn-sm" type="button" data-lead="apply" data-i="${i}">${l.type === 'retiro' ? 'Aplicar retiro' : l.type === 'reclamo' ? 'Registrar reclamo' : 'Convertir en prospecto'}</button><button class="btn btn-ghost btn-sm" type="button" data-lead="done" data-i="${i}">Marcar atendida</button>`}<button class="btn btn-ghost btn-sm" type="button" data-lead="del" data-i="${i}">Eliminar</button></div></li>`;
+        <div class="la">${l.handled ? '' : `<button class="btn btn-red btn-sm" type="button" data-lead="apply" data-i="${i}">${l.type === 'retiro' ? 'Aplicar retiro' : l.type === 'reclamo' ? 'Registrar reclamo' : l.type === 'evento' ? 'Registrar en el prospecto' : l.type === 'reporte' ? 'Marcar revisada' : 'Convertir en prospecto'}</button><button class="btn btn-ghost btn-sm" type="button" data-lead="done" data-i="${i}">Marcar atendida</button>`}<button class="btn btn-ghost btn-sm" type="button" data-lead="del" data-i="${i}">Eliminar</button></div></li>`;
     }).join('') : `<li class="panelx empty-s">Aún no hay solicitudes. Envía una desde el <a href="index.html#cotizar">formulario público</a> o crea una de ejemplo.</li>`;
     const O = P.filter(p => p.status === 'nocontactar');
     $('#optouts').innerHTML = O.length ? O.map(p => `<li><span><strong>${esc(p.name)}</strong> <small>· ${fmtD(p.optout && p.optout.at)} · ${esc(p.optout ? p.optout.reason : '')}</small></span><span class="row-a"><button class="btn btn-ghost btn-sm" type="button" data-open="${p.id}">Ver ficha</button></span></li>`).join('') : `<li class="muted">Nadie en la lista por ahora.</li>`;
@@ -427,6 +427,7 @@
   function findByName(name) { const n = norm(name).trim(); return P.find(p => norm(p.name).trim() === n) || P.find(p => n.length > 4 && (norm(p.name).includes(n) || n.includes(norm(p.name)))); }
   function applyLead(i) {
     const L = getLeads(), l = L[i]; if (!l) return;
+    if (l.type === 'reporte') { l.handled = true; putLeads(L); render(); toast('Reporte marcado como revisado. Si procede, retira la reseña.'); return; }
     let p = findByName(l.biz);
     if (l.type === 'cotizacion') {
       if (!p) { p = blank({ name: l.biz, phone: l.phone, source: 'Cotización en el sitio público', status: 'respondio', maxStage: 2, contactedAt: today() }); P.unshift(p); log(p, 'ch', 'Creado desde una cotización del sitio'); }
@@ -436,6 +437,10 @@
       if (!p) { p = blank({ name: l.biz, phone: l.phone, source: 'Reclamo en el sitio público', status: 'respondio', maxStage: 2, contactedAt: today() }); P.unshift(p); }
       else { p.phone = p.phone || l.phone; if (ORDER.indexOf(p.status) < 2 && ORDER.includes(p.status)) setStatus(p, 'respondio'); }
       log(p, 'nota', `Reclamó su ficha (${l.role}). Verificar por WhatsApp antes de publicar fotos.`); p.next = { date: today(), text: 'Verificar la ficha por WhatsApp' };
+    } else if (l.type === 'evento') {
+      if (!p) { p = blank({ name: l.biz, phone: l.phone, source: 'Evento enviado en el sitio público', status: 'respondio', maxStage: 2, contactedAt: today() }); P.unshift(p); }
+      else { p.phone = p.phone || l.phone; }
+      log(p, 'nota', `Quiere publicar un evento: «${l.title}» el ${l.date} a las ${l.time}. Revisar antes de publicar.`); p.next = { date: today(), text: 'Revisar y confirmar el evento por WhatsApp' };
     } else if (l.type === 'retiro') {
       if (!p) { p = blank({ name: l.biz, source: 'Solicitud de retiro', status: 'nuevo' }); P.unshift(p); }
       setOptout(p, 'Solicitó retiro desde el sitio');

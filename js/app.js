@@ -47,10 +47,37 @@
   }
 
   /* ---------- estado ---------- */
-  const state = { q: '', cats: new Set(), barrio: '', open: false, web: false, selected: null };
+  const state = { q: '', cats: new Set(), barrio: '', open: false, web: false, ev: false, top: false, selected: null };
   let theme = store.get('dm_theme') === 'light' ? 'light' : 'dark';
   let favs = [];
   try { favs = JSON.parse(store.get('dm_favs') || '[]'); } catch { favs = []; }
+
+  /* ---------- eventos y reseñas (datos de demostración + lo que escribe la persona en este navegador) ---------- */
+  const BOG = { timeZone: 'America/Bogota' };
+  const fmtDayNum = new Intl.DateTimeFormat('es-CO', { ...BOG, day: 'numeric' });
+  const fmtMon = new Intl.DateTimeFormat('es-CO', { ...BOG, month: 'short' });
+  const fmtLong = new Intl.DateTimeFormat('es-CO', { ...BOG, weekday: 'long', day: 'numeric', month: 'long' });
+  const fmtShort = new Intl.DateTimeFormat('es-CO', { ...BOG, weekday: 'short', day: 'numeric', month: 'short' });
+  const fmtDate = ms => new Date(ms).toLocaleDateString('es-CO', { ...BOG, day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '');
+  const evWhen = e => new Date(Date.now() + e.d * 864e5);
+  const evLabel = e => (e.d === 0 ? 'Hoy' : e.d === 1 ? 'Mañana' : fmtShort.format(evWhen(e)).replace('.', ''));
+  const EVB = {};
+  EVENTS.forEach(e => { (EVB[e.biz] = EVB[e.biz] || []).push(e); });
+  Object.values(EVB).forEach(l => l.sort((a, b) => a.d - b.d));
+  const EVT = Object.fromEntries(EVENT_TYPES.map(t => [t.id, t.label]));
+  let myRev = {};
+  try { myRev = JSON.parse(store.get('dm_reviews') || '{}'); } catch { myRev = {}; }
+  function reviewsOf(id) {
+    const seed = REVIEWS_SEED.filter(r => r.biz === id).map(r => ({ stars: r.stars, name: r.name, text: r.text, at: Date.now() - r.daysAgo * 864e5, example: true }));
+    const mine = myRev[id] ? [{ ...myRev[id], mine: true }] : [];
+    return [...mine, ...seed].sort((a, b) => b.at - a.at);
+  }
+  function ratingOf(id) {
+    const r = reviewsOf(id), n = r.length;
+    return { n, avg: n ? r.reduce((a, x) => a + x.stars, 0) / n : 0 };
+  }
+  const starsHTML = avg => `<span class="stars" style="--r:${avg.toFixed(2)}" role="img" aria-label="${avg.toFixed(1).replace('.', ',')} de 5 estrellas">★★★★★</span>`;
+  const avgTxt = v => v.toFixed(1).replace('.', ',');
 
   function filtered() {
     const q = norm(state.q.trim());
@@ -59,6 +86,8 @@
       if (state.barrio && b.barrio !== state.barrio) return false;
       if (state.open && !isOpen(b)) return false;
       if (state.web && !b.web) return false;
+      if (state.ev && !(EVB[b.id] || []).length) return false;
+      if (state.top) { const r = ratingOf(b.id); if (!(r.n && r.avg >= 4)) return false; }
       if (q) {
         const hay = norm([b.name, CATS[b.cat].label, BAR[b.barrio].name, b.desc, ...b.services].join(' '));
         return q.split(/\s+/).every(w => hay.includes(w));
@@ -66,7 +95,7 @@
       return true;
     });
   }
-  const anyFilter = () => state.q || state.cats.size || state.barrio || state.open || state.web;
+  const anyFilter = () => state.q || state.cats.size || state.barrio || state.open || state.web || state.ev || state.top;
 
   /* ---------- cabecera, tema, menú ---------- */
   const bar = $('#bar');
@@ -238,12 +267,12 @@
       return;
     }
     listEl.innerHTML = list.map(b => {
-      const open = isOpen(b);
+      const open = isOpen(b), rt = ratingOf(b.id), nev = (EVB[b.id] || []).length;
       return `<li><button class="card${state.selected === b.id ? ' on' : ''}" data-id="${b.id}" type="button">
         <span class="thumb${b.webBy ? ' sx' : ''}">${catIco(b.cat)}</span>
         <span class="card-t"><strong>${esc(b.name)}</strong>
           <small>${CATS[b.cat].label} · ${esc(BAR[b.barrio].name)}</small>
-          <span class="meta"><span class="${open ? 'open-b' : 'closed-b'}">${open ? 'Abierto' : 'Cerrado'}</span><span>${PRICE[b.price]}</span>${b.claimed ? '' : '<span class="unc">Sin reclamar</span>'}</span>
+          <span class="meta"><span class="${open ? 'open-b' : 'closed-b'}">${open ? 'Abierto' : 'Cerrado'}</span><span>${PRICE[b.price]}</span>${rt.n ? `<span class="rt">★ ${avgTxt(rt.avg)} <small>(${rt.n})</small></span>` : ''}${nev ? '<span class="evtag">Evento</span>' : ''}${b.claimed ? '' : '<span class="unc">Sin reclamar</span>'}</span>
         </span></button></li>`;
     }).join('');
   }
@@ -262,6 +291,8 @@
     $('#barrioSel').value = state.barrio;
     $('#openTgl').setAttribute('aria-pressed', state.open);
     $('#webTgl').setAttribute('aria-pressed', state.web);
+    $('#evTgl').setAttribute('aria-pressed', state.ev);
+    $('#topTgl').setAttribute('aria-pressed', state.top);
     $('#q').value = state.q;
   }
 
@@ -271,7 +302,7 @@
     $('#quickCats').innerHTML = CATEGORIES.slice(0, 6).map(c => `<button class="qchip" type="button" data-id="${c.id}">${catIco(c.id)}${c.label}</button>`).join('');
     const openNow = BUSINESSES.filter(isOpen).length;
     $('#stats').innerHTML = [
-      [BUSINESSES.length, 'Negocios'], [BARRIOS.length, 'Barrios'], [CATEGORIES.length, 'Categorías'], [openNow, 'Abiertos ahora']
+      [BUSINESSES.length, 'Negocios'], [BARRIOS.length, 'Barrios'], [EVENTS.length, 'Eventos'], [openNow, 'Abiertos ahora']
     ].map(([n, l]) => `<div><dt>${l}</dt><dd>${n}</dd></div>`).join('');
     $('#barriosGrid').innerHTML = BARRIOS.map((b, i) => {
       const n = BUSINESSES.filter(x => x.barrio === b.id).length;
@@ -294,13 +325,15 @@
     });
     $('#openTgl').addEventListener('click', () => { state.open = !state.open; syncUI(); refresh({ doFit: true }); });
     $('#webTgl').addEventListener('click', () => { state.web = !state.web; syncUI(); refresh({ doFit: true }); });
+    $('#evTgl').addEventListener('click', () => { state.ev = !state.ev; syncUI(); refresh({ doFit: true }); });
+    $('#topTgl').addEventListener('click', () => { state.top = !state.top; syncUI(); refresh({ doFit: true }); });
     let qT;
     $('#q').addEventListener('input', e => {
       state.q = e.target.value; refresh();
       clearTimeout(qT); qT = setTimeout(() => fit(), 350);
     });
     $('#clearBtn').addEventListener('click', () => {
-      Object.assign(state, { q: '', barrio: '', open: false, web: false }); state.cats.clear();
+      Object.assign(state, { q: '', barrio: '', open: false, web: false, ev: false, top: false }); state.cats.clear();
       syncUI(); refresh({ doFit: true });
     });
     listEl.addEventListener('click', e => { const c = e.target.closest('.card'); if (c) select(c.dataset.id, { from: 'list' }); });
@@ -321,6 +354,23 @@
   /* ---------- ficha ---------- */
   const ficha = $('#ficha'), sheetBg = $('#sheetBg');
   let lastFocus = null;
+
+  function reviewsHTML(b) {
+    const list = reviewsOf(b.id), { n, avg } = ratingOf(b.id), mine = myRev[b.id];
+    return `<h4>Calificaciones y comentarios</h4>
+      <div class="rev-sum">${n ? `<strong>${avgTxt(avg)}</strong>${starsHTML(avg)}<small>${n} ${n === 1 ? 'reseña' : 'reseñas'}</small>` : '<small>Aún no hay reseñas. Sé la primera persona en calificar.</small>'}</div>
+      <form class="rev-form" id="revForm" novalidate>
+        <fieldset><legend>${mine ? 'Actualiza tu calificación' : 'Tu calificación'}</legend>
+          <div class="pick" role="radiogroup" aria-label="Calificación de 1 a 5 estrellas">${[1, 2, 3, 4, 5].map(v => `<button type="button" class="pk${mine && mine.stars >= v ? ' on' : ''}" role="radio" aria-checked="${!!mine && mine.stars === v}" data-v="${v}" aria-label="${v} ${v === 1 ? 'estrella' : 'estrellas'}">★</button>`).join('')}</div></fieldset>
+        <input type="hidden" name="stars" value="${mine ? mine.stars : ''}">
+        <label>Tu nombre <span class="opt">(opcional)</span><input name="name" type="text" maxlength="30" value="${mine ? esc(mine.name) : ''}" placeholder="Cómo quieres aparecer"></label>
+        <label>Tu comentario <span class="opt">(opcional)</span><textarea name="text" rows="3" maxlength="400" placeholder="Cuenta cómo te fue: atención, ambiente, precios…">${mine ? esc(mine.text) : ''}</textarea></label>
+        <p class="rev-rules">Habla de tu experiencia y sé respetuoso. No se permiten enlaces, datos de contacto ni insultos. Revisamos las reseñas reportadas.</p>
+        <p class="err" role="alert" hidden></p>
+        <button class="btn btn-red" type="submit">${mine ? 'Actualizar reseña' : 'Publicar reseña'}</button>
+      </form>
+      <ul class="rev-list">${list.slice(0, 6).map((r, i) => `<li><div class="rev-h">${starsHTML(r.stars)}<span><strong>${esc(r.name || 'Anónimo')}</strong> · ${fmtDate(r.at)}${r.example ? ' <em class="exm">Ejemplo</em>' : ''}${r.mine ? ' <em class="exm mine">Tuya</em>' : ''}</span></div>${r.text ? `<p>${esc(r.text)}</p>` : ''}${r.mine ? '' : `<button class="link rep" type="button" data-rep="${i}">Reportar</button>`}</li>`).join('')}</ul>`;
+  }
 
   function fichaHTML(b) {
     const open = isOpen(b), fav = favs.includes(b.id);
@@ -347,6 +397,8 @@
           ${b.web ? `<a class="btn btn-ghost" href="${esc(b.web)}" target="_blank" rel="noopener noreferrer">Sitio oficial</a>` : `<span></span>`}
           <a class="btn btn-ghost" href="${dest}" target="_blank" rel="noopener noreferrer">Cómo llegar</a>
         </div>
+        ${(EVB[b.id] || []).length ? `<div class="f-ev"><h4>Próximos eventos</h4>${EVB[b.id].map(e => `<button class="f-evi" type="button" data-ev="${e.id}"><span class="d"><b>${fmtDayNum.format(evWhen(e))}</b><i>${fmtMon.format(evWhen(e)).replace('.', '')}</i></span><span class="t"><strong>${esc(e.title)}</strong><small>${evLabel(e)} · ${e.time} · ${esc(e.price)}</small></span></button>`).join('')}</div>` : ''}
+        <div class="rev" id="revBlock">${reviewsHTML(b)}</div>
         ${b.claimed ? '' : `<div class="claim-box"><p><strong>Ficha sin reclamar.</strong> Solo mostramos datos públicos. Si este es tu negocio, reclámala gratis y completa fotos, horarios y enlaces.</p>
           <button class="btn btn-red" type="button" data-act="claim">Reclamar esta ficha</button></div>`}
         <p class="note-demo">Datos de ejemplo para la demostración.</p>
@@ -378,7 +430,21 @@
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
   }
 
+  const REVIEW_BAD = /(https?:\/\/|www\.|\b[\w-]+\.(com|co|net|org|io)\b|@|\b\d{7,}\b)/i;
   ficha.addEventListener('click', e => {
+    const pk = e.target.closest('.pk');
+    if (pk) {
+      const f = pk.closest('form'), v = +pk.dataset.v; f.stars.value = v;
+      $$('.pk', f).forEach(x => { x.classList.toggle('on', +x.dataset.v <= v); x.setAttribute('aria-checked', +x.dataset.v === v); });
+      return;
+    }
+    const ev = e.target.closest('[data-ev]'); if (ev) { openEvent(ev.dataset.ev); return; }
+    const rep = e.target.closest('[data-rep]');
+    if (rep && state.selected) {
+      const r = reviewsOf(state.selected)[+rep.dataset.rep];
+      if (r) { saveLead('reporte', { biz: BIZ[state.selected].name, reviewer: r.name || 'Anónimo', text: r.text || '(solo calificación)' }); rep.textContent = 'Reportada, gracias'; rep.disabled = true; toast('Gracias. Revisaremos esta reseña.'); }
+      return;
+    }
     const a = e.target.closest('[data-act]'); if (!a) return;
     const b = BIZ[state.selected];
     if (a.dataset.act === 'close') closeFicha();
@@ -390,6 +456,20 @@
       toast(on ? 'Guardado en tu lista' : 'Quitado de tu lista');
     } else if (a.dataset.act === 'wa') toast('Demostración: aquí se abre el WhatsApp del negocio.');
     else if (a.dataset.act === 'claim' && b) openClaim(b);
+  });
+  ficha.addEventListener('submit', e => {
+    if (e.target.id !== 'revForm') return;
+    e.preventDefault();
+    const f = e.target, b = BIZ[state.selected], err = $('.err', f);
+    const stars = +f.stars.value, name = f.name.value.trim(), text = f.text.value.trim();
+    const fail = m => { err.textContent = m; err.hidden = false; };
+    if (!(stars >= 1 && stars <= 5)) return fail('Elige de 1 a 5 estrellas.');
+    if (REVIEW_BAD.test(name) || REVIEW_BAD.test(text)) return fail('No se permiten enlaces, correos ni números de contacto.');
+    myRev[b.id] = { stars, name, text, at: Date.now() };
+    store.set('dm_reviews', JSON.stringify(myRev));
+    $('#revBlock').innerHTML = reviewsHTML(b);
+    refresh();
+    toast('Gracias por tu reseña.');
   });
   sheetBg.addEventListener('click', closeFicha);
   addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); else if (e.key === 'Escape') closeFicha(); });
@@ -623,7 +703,7 @@
       new IntersectionObserver(es => { vis = es[0].isIntersecting; }, { threshold: 0.35 }).observe($('#builder'));
       setInterval(() => {
         if (!bd.auto || !vis || document.hidden) return;
-        i = (i + 1) % DEMOS; [bd.demo, bd.cat, bd.acc] = DEMOS[i];
+        i = (i + 1) % DEMOS.length; [bd.demo, bd.cat, bd.acc] = DEMOS[i];
         renderBdControls(); renderSite(true);
       }, 3200);
     }
@@ -638,6 +718,63 @@
     else { f.service.value = 'No estoy seguro, quiero asesoría'; f.msg.value = ''; }
     $('#cotizar').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
   });
+
+  /* ---------- eventos ---------- */
+  let evFilter = 'all';
+  function evList() {
+    return EVENTS.filter(e => evFilter === 'all' || (evFilter === 'today' ? e.d === 0 : evFilter === 'week' ? e.d <= 6 : e.type === evFilter))
+      .sort((a, b) => a.d - b.d || a.time.localeCompare(b.time));
+  }
+  function renderEvents() {
+    const fl = [['all', 'Todos'], ['today', 'Hoy'], ['week', 'Esta semana'], ...EVENT_TYPES.map(t => [t.id, t.label])];
+    $('#evFilters').innerHTML = fl.map(([id, l]) => `<button class="chip" type="button" data-f="${id}" aria-pressed="${evFilter === id}">${l}</button>`).join('');
+    const list = evList();
+    $('#evGrid').innerHTML = list.length ? list.map(e => {
+      const b = BIZ[e.biz], w = evWhen(e);
+      return `<button class="evc rv in" type="button" data-ev="${e.id}"><span class="ev-d"><b>${fmtDayNum.format(w)}</b><i>${fmtMon.format(w).replace('.', '')}</i></span>
+        <span class="ev-b"><em class="ev-t">${EVT[e.type] || 'Evento'}</em><strong>${esc(e.title)}</strong><small>${esc(b.name)} · ${esc(BAR[b.barrio].name)}</small>
+        <span class="ev-m">${evLabel(e)} · ${e.time} · ${esc(e.price)}</span></span></button>`;
+    }).join('') : `<p class="ev-empty">No hay eventos con ese filtro. Prueba con «Todos».</p>`;
+  }
+  function openEvent(id) {
+    const e = EVENTS.find(x => x.id === id); if (!e) return;
+    const b = BIZ[e.biz], rt = ratingOf(b.id), dest = `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}`;
+    openModal(`<span class="ev-t">${EVT[e.type] || 'Evento'}</span><h3 id="mTitle">${esc(e.title)}</h3>
+      <p><strong>${esc(fmtLong.format(evWhen(e)))} · ${e.time}</strong><br>${esc(e.price)}</p>
+      <p>${esc(e.desc)}</p>
+      <p><strong>${esc(b.name)}</strong> · ${esc(BAR[b.barrio].name)}${rt.n ? ` · ★ ${avgTxt(rt.avg)} (${rt.n})` : ''}</p>
+      <div class="row-a"><button class="btn btn-red" type="button" data-evmap="${b.id}">Ver el negocio en el mapa</button>
+        <a class="btn btn-ghost" href="${dest}" target="_blank" rel="noopener noreferrer">Cómo llegar</a></div>
+      <p class="note-demo">Evento de ejemplo para la demostración.</p>`);
+  }
+  function openPublishEvent() {
+    const min = new Intl.DateTimeFormat('sv-SE', BOG).format(new Date());
+    openModal(`<h3 id="mTitle">Publicar un evento</h3>
+      <p>Es gratis. Revisamos cada evento antes de mostrarlo y te avisamos por WhatsApp.</p>
+      ${simpleForm('evForm', `
+        <label>Nombre del negocio<input name="biz" type="text" required></label>
+        <label>Tu nombre<input name="name" type="text" required autocomplete="name"></label>
+        <label>WhatsApp<input name="phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="300 000 0000"></label>
+        <label>Nombre del evento<input name="title" type="text" required maxlength="70" placeholder="Ej: Noche de música en vivo"></label>
+        <label>Fecha<input name="date" type="date" required min="${min}"></label>
+        <label>Hora<input name="time" type="time" required></label>
+        <label>Cuéntanos más <span class="opt">(opcional)</span><textarea name="desc" rows="3" maxlength="300" placeholder="Qué habrá, precio o cover, cómo reservar…"></textarea></label>`, 'Enviar evento')}`);
+    $('#evForm').addEventListener('submit', e => {
+      e.preventDefault(); const f = e.target, err = $('.err', f);
+      if (!validate(f)) { err.textContent = 'Revisa los campos marcados.'; err.hidden = false; return; }
+      saveLead('evento', { biz: f.biz.value.trim(), name: f.name.value.trim(), phone: cleanPhone(f.phone.value), title: f.title.value.trim(), date: f.date.value, time: f.time.value, desc: f.desc.value.trim() });
+      $('#mBody').innerHTML = `<h3>Recibimos tu evento</h3><p class="ok">Gracias. Lo revisamos y, si todo está bien, lo publicamos.</p><p>Modo demostración: la solicitud quedó guardada solo en este navegador.</p><button class="btn btn-ghost" type="button" data-close>Cerrar</button>`;
+    });
+  }
+  $('#evFilters').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; evFilter = c.dataset.f; renderEvents(); });
+  $('#evGrid').addEventListener('click', e => { const c = e.target.closest('[data-ev]'); if (c) openEvent(c.dataset.ev); });
+  $('#evPublish').addEventListener('click', openPublishEvent);
+  $('#mBody').addEventListener('click', e => {
+    const m = e.target.closest('[data-evmap]'); if (!m) return;
+    closeModal(); state.q = ''; syncUI(); refresh(); goExplorer();
+    setTimeout(() => select(m.dataset.evmap, { from: 'list' }), reduceMotion ? 0 : 650);
+  });
+  renderEvents();
 
   /* ---------- aparición al hacer scroll ---------- */
   function reveal() {
@@ -673,7 +810,7 @@
     const io = new IntersectionObserver(es => es.forEach(en => {
       if (en.isIntersecting) links.forEach(a => a.classList.toggle('on', a === map2[en.target.id]));
     }), { rootMargin: '-45% 0px -50% 0px' });
-    ['explorar', 'barrios', 'negocios', 'cotizar'].forEach(id => { const s = document.getElementById(id); if (s) io.observe(s); });
+    ['explorar', 'barrios', 'eventos', 'negocios', 'cotizar'].forEach(id => { const s = document.getElementById(id); if (s) io.observe(s); });
     new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) links.forEach(a => a.classList.remove('on')); }), { rootMargin: '-45% 0px -50% 0px' }).observe($('#inicio'));
   }
 
