@@ -343,11 +343,21 @@
   async function getStyle() {
     if (!baseStyle) baseStyle = await (await fetch('https://tiles.openfreemap.org/styles/positron')).json();
     const s = JSON.parse(JSON.stringify(baseStyle));
+    declutter(s);
     if (theme === 'dark') recolor(s);
     return s;
   }
+  /* Mismo estilo limpio que el sitio público: lo menor aparece solo al acercarse. */
+  function declutter(s) {
+    const minz = { highway_path: 15.5, highway_minor: 14.4, 'highway-name-path': 17, 'highway-name-minor': 16.5, 'highway-name-major': 15, label_other: 14.6, building: 15.4, waterway: 13.5, landuse_residential: 13 };
+    for (const l of s.layers) {
+      if (minz[l.id] != null) l.minzoom = Math.max(l.minzoom || 0, minz[l.id]);
+      if (/^(waterway_line_label|water_name_point_label|water_name_line_label|airport)$/.test(l.id) || /shield/.test(l.id)) (l.layout = l.layout || {}).visibility = 'none';
+      if (l.type === 'line' && /casing/.test(l.id)) { l.paint = l.paint || {}; l.paint['line-opacity'] = 0; }
+    }
+  }
   function recolor(s) {
-    const C = { land: '#0f0f12', water: '#050505', park: '#121418', build: '#17181d', road: '#272930', major: '#3a3d46', cas: '#0a0a0c', label: '#8e909a', halo: '#050505', lwater: '#5a5d6a' };
+    const C = { land: '#0f0f12', water: '#050505', park: '#121418', build: '#17181d', road: '#1a1c22', major: '#272930', cas: '#0a0a0c', label: '#8e909a', halo: '#050505', lwater: '#5a5d6a' };
     for (const l of s.layers) {
       const p = l.paint = l.paint || {};
       if (/shield/.test(l.id)) { (l.layout = l.layout || {}).visibility = 'none'; continue; }

@@ -47,7 +47,7 @@
   }
 
   /* ---------- estado ---------- */
-  const state = { q: '', cats: new Set(), barrio: '', open: false, web: false, ev: false, top: false, selected: null };
+  const state = { q: '', cats: new Set(), barrio: '', open: false, web: false, ev: false, top: false, view: false, selected: null };
   let theme = store.get('dm_theme') === 'light' ? 'light' : 'dark';
   let favs = [];
   try { favs = JSON.parse(store.get('dm_favs') || '[]'); } catch { favs = []; }
@@ -87,6 +87,7 @@
       if (state.open && !isOpen(b)) return false;
       if (state.web && !b.web) return false;
       if (state.ev && !(EVB[b.id] || []).length) return false;
+      if (state.view && map) { try { if (!map.getBounds().contains([b.lng, b.lat])) return false; } catch { /* mapa aún cargando */ } }
       if (state.top) { const r = ratingOf(b.id); if (!(r.n && r.avg >= 4)) return false; }
       if (q) {
         const hay = norm([b.name, CATS[b.cat].label, BAR[b.barrio].name, b.desc, ...b.services].join(' '));
@@ -95,7 +96,7 @@
       return true;
     });
   }
-  const anyFilter = () => state.q || state.cats.size || state.barrio || state.open || state.web || state.ev || state.top;
+  const anyFilter = () => state.q || state.cats.size || state.barrio || state.open || state.web || state.ev || state.top || state.view;
 
   /* ---------- cabecera, tema, menú ---------- */
   const bar = $('#bar');
@@ -119,18 +120,30 @@
   $('#yr').textContent = new Date().getFullYear();
 
   /* ---------- mapa ---------- */
-  let map = null, baseStyle = null, hoverPopup = null;
+  let map = null, baseStyle = null, hoverPopup = null, hovId = null, zoneHov = null;
   const FONT = ['Noto Sans Regular'];
+  const ZOOM_PINS = 13.9;                       // por debajo se ven zonas; por encima, negocios
+  const mapOpt = { d3: false, ev: false };
 
   async function getStyle() {
     if (!baseStyle) baseStyle = await (await fetch('https://tiles.openfreemap.org/styles/positron')).json();
     const s = JSON.parse(JSON.stringify(baseStyle));
+    declutter(s);
     if (theme === 'dark') recolor(s);
     return s;
   }
+  /* Menos ruido: lo menor aparece solo al acercarse y se quitan contornos y etiquetas secundarias. */
+  function declutter(s) {
+    const minz = { highway_path: 15.5, highway_minor: 14.4, 'highway-name-path': 17, 'highway-name-minor': 16.5, 'highway-name-major': 15, label_other: 14.6, building: 15.4, waterway: 13.5, landuse_residential: 13 };
+    for (const l of s.layers) {
+      if (minz[l.id] != null) l.minzoom = Math.max(l.minzoom || 0, minz[l.id]);
+      if (/^(waterway_line_label|water_name_point_label|water_name_line_label|airport)$/.test(l.id) || /shield/.test(l.id)) (l.layout = l.layout || {}).visibility = 'none';
+      if (l.type === 'line' && /casing/.test(l.id)) { l.paint = l.paint || {}; l.paint['line-opacity'] = 0; }
+    }
+  }
   /* Repinta el estilo base a la paleta SONETIX (negro, grafito, humo). */
   function recolor(s) {
-    const C = { land: '#0f0f12', water: '#050505', park: '#121418', build: '#17181d', road: '#272930', major: '#3a3d46', cas: '#0a0a0c', label: '#8e909a', halo: '#050505', lwater: '#5a5d6a' };
+    const C = { land: '#0f0f12', water: '#050505', park: '#101115', build: '#14151a', road: '#1a1c22', major: '#272930', cas: '#0a0a0c', label: '#8e909a', halo: '#050505', lwater: '#5a5d6a' };
     for (const l of s.layers) {
       const p = l.paint = l.paint || {};
       if (/shield/.test(l.id)) { (l.layout = l.layout || {}).visibility = 'none'; continue; }
@@ -139,13 +152,13 @@
         if (l.id === 'water') p['fill-color'] = C.water;
         else if (/park|wood/.test(l.id)) p['fill-color'] = C.park;
         else if (/ice|glacier/.test(l.id)) p['fill-opacity'] = 0;
-        else if (l.id === 'building') { p['fill-color'] = C.build; p['fill-outline-color'] = '#1d1f26'; }
+        else if (l.id === 'building') { p['fill-color'] = C.build; p['fill-outline-color'] = '#181a20'; }
         else p['fill-color'] = C.land;
       } else if (l.type === 'line') {
         if (/dashline/.test(l.id)) p['line-color'] = 'rgba(0,0,0,0)';
-        else if (/boundary/.test(l.id)) p['line-color'] = '#3a3d46';
+        else if (/boundary/.test(l.id)) p['line-color'] = '#2f313a';
         else if (/casing/.test(l.id)) p['line-color'] = C.cas;
-        else if (/railway|aeroway/.test(l.id)) p['line-color'] = '#1d1f26';
+        else if (/railway|aeroway/.test(l.id)) p['line-color'] = '#181a20';
         else if (l.id === 'waterway') p['line-color'] = '#0a0b0e';
         else if (/major|motorway/.test(l.id)) p['line-color'] = C.major;
         else p['line-color'] = C.road;
@@ -164,44 +177,126 @@
     type: 'FeatureCollection',
     features: list.map(b => ({
       type: 'Feature', geometry: { type: 'Point', coordinates: [b.lng, b.lat] },
-      properties: { id: b.id, name: b.name, claimed: b.claimed, web: !!b.web, by: b.webBy || '' }
+      properties: { id: b.id, name: b.name, claimed: b.claimed, web: !!b.web, by: b.webBy || '', ev: !!(EVB[b.id] || []).length }
     }))
   });
+  const zonesFC = list => {
+    const g = {};
+    list.forEach(b => { (g[b.barrio] = g[b.barrio] || []).push(b); });
+    return { type: 'FeatureCollection', features: Object.entries(g).filter(([id]) => BAR[id]).map(([id, arr]) => ({
+      type: 'Feature', geometry: { type: 'Point', coordinates: [BAR[id].lng, BAR[id].lat] }, properties: { id, name: BAR[id].name, count: arr.length } })) };
+  };
   const selFC = () => {
     const b = BIZ[state.selected];
     return { type: 'FeatureCollection', features: b ? [{ type: 'Feature', geometry: { type: 'Point', coordinates: [b.lng, b.lat] }, properties: {} }] : [] };
   };
+  function pushData(list) {
+    if (!map) return;
+    const s = map.getSource('biz'); if (s) s.setData(toFC(list));
+    const z = map.getSource('zones'); if (z) z.setData(zonesFC(list));
+  }
 
   function addLayers() {
-    const c = pal(), RED = '#ff0a1e';
-    const dark = theme === 'dark', single = ['!', ['has', 'point_count']];
-    map.addSource('biz', { type: 'geojson', data: toFC(filtered()), cluster: true, clusterRadius: 44, clusterMaxZoom: 14 });
+    const c = pal(), RED = '#ff0a1e', dark = theme === 'dark', list = filtered();
+    const H = ['boolean', ['feature-state', 'hover'], false];
+    const fadeIn = ['interpolate', ['linear'], ['zoom'], 13.3, 0, ZOOM_PINS, 1];
+    const fadeOut = ['interpolate', ['linear'], ['zoom'], 13.2, 1, ZOOM_PINS, 0];
+    map.addSource('biz', { type: 'geojson', data: toFC(list), promoteId: 'id' });
+    map.addSource('zones', { type: 'geojson', data: zonesFC(list), promoteId: 'id' });
     map.addSource('sel', { type: 'geojson', data: selFC() });
-    map.addLayer({ id: 'clusters', type: 'circle', source: 'biz', filter: ['has', 'point_count'],
-      paint: { 'circle-radius': ['step', ['get', 'point_count'], 17, 4, 21, 8, 25], 'circle-color': dark ? '#151518' : '#ffffff',
-        'circle-stroke-color': RED, 'circle-stroke-width': 2, 'circle-opacity': 0.96 } });
-    map.addLayer({ id: 'cluster-count', type: 'symbol', source: 'biz', filter: ['has', 'point_count'],
-      layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-font': FONT, 'text-size': 13, 'text-allow-overlap': true },
-      paint: { 'text-color': c.txt } });
-    map.addLayer({ id: 'halo', type: 'circle', source: 'biz', filter: ['all', single, ['==', ['get', 'by'], 'sonetix']],
-      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 24], 'circle-color': RED, 'circle-opacity': 0.3, 'circle-blur': 0.8 } });
-    map.addLayer({ id: 'pins', type: 'circle', source: 'biz', filter: single,
+
+    // edificios en 3D (solo visibles con el botón 3D)
+    map.addLayer({ id: 'bld3d', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: 14.8,
+      layout: { visibility: mapOpt.d3 ? 'visible' : 'none' },
+      paint: { 'fill-extrusion-color': dark ? '#23252d' : '#dcdde4', 'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 6],
+        'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0], 'fill-extrusion-opacity': 0.9 } });
+
+    // vista de zonas: una burbuja por barrio
+    const zr = ['+', 15, ['*', 2.6, ['sqrt', ['get', 'count']]]];
+    map.addLayer({ id: 'zone-bubble', type: 'circle', source: 'zones', maxzoom: ZOOM_PINS,
+      paint: { 'circle-radius': ['case', H, ['+', zr, 4], zr], 'circle-color': dark ? '#151518' : '#ffffff', 'circle-opacity': fadeOut,
+        'circle-stroke-color': RED, 'circle-stroke-width': ['case', H, 2.5, 1.5], 'circle-stroke-opacity': fadeOut } });
+    map.addLayer({ id: 'zone-count', type: 'symbol', source: 'zones', maxzoom: ZOOM_PINS,
+      layout: { 'text-field': ['to-string', ['get', 'count']], 'text-font': FONT, 'text-size': 14, 'text-allow-overlap': true },
+      paint: { 'text-color': c.txt, 'text-opacity': fadeOut } });
+    map.addLayer({ id: 'zone-name', type: 'symbol', source: 'zones', maxzoom: ZOOM_PINS,
+      layout: { 'text-field': ['get', 'name'], 'text-font': FONT, 'text-size': 12, 'text-anchor': 'top', 'text-offset': [0, 2.5], 'text-optional': true },
+      paint: { 'text-color': c.txt, 'text-halo-color': c.halo, 'text-halo-width': 1.4, 'text-opacity': fadeOut } });
+
+    // vista de negocios
+    map.addLayer({ id: 'halo', type: 'circle', source: 'biz', minzoom: 13.3, filter: ['==', ['get', 'by'], 'sonetix'],
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 10, 16, 24], 'circle-color': RED, 'circle-blur': 0.8,
+        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 13.3, 0, ZOOM_PINS, 0.26] } });
+    map.addLayer({ id: 'evring', type: 'circle', source: 'biz', minzoom: 13.3, filter: ['==', ['get', 'ev'], true],
+      layout: { visibility: mapOpt.ev ? 'visible' : 'none' },
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 9, 16, 17], 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': RED, 'circle-stroke-width': 1.6, 'circle-stroke-opacity': fadeIn } });
+    map.addLayer({ id: 'pins', type: 'circle', source: 'biz', minzoom: 13.3,
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 4.5, 16, 9],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, ['case', H, 6.5, 4], 16, ['case', H, 11.5, 8.5]],
         'circle-color': ['case', ['==', ['get', 'by'], 'sonetix'], RED, ['get', 'claimed'], c.pin, 'rgba(142,144,154,0.22)'],
         'circle-stroke-color': ['case', ['==', ['get', 'by'], 'sonetix'], '#ffffff', ['get', 'claimed'], c.stroke, c.unc],
-        'circle-stroke-width': 2
+        'circle-stroke-width': ['case', H, 3, 2], 'circle-opacity': fadeIn, 'circle-stroke-opacity': fadeIn
       } });
-    map.addLayer({ id: 'webdot', type: 'circle', source: 'biz', filter: ['all', single, ['==', ['get', 'web'], true], ['!=', ['get', 'by'], 'sonetix']],
-      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 2.4, 16, 4.6], 'circle-color': c.grn, 'circle-stroke-color': c.stroke, 'circle-stroke-width': 1.4,
-        'circle-translate': [7, -7], 'circle-translate-anchor': 'viewport' } });
-    map.addLayer({ id: 'labels', type: 'symbol', source: 'biz', minzoom: 14.2, filter: single,
-      layout: { 'text-field': ['get', 'name'], 'text-font': FONT, 'text-size': 12, 'text-offset': [0, 1.1], 'text-anchor': 'top', 'text-optional': true },
+    map.addLayer({ id: 'webdot', type: 'circle', source: 'biz', minzoom: 13.3, filter: ['all', ['==', ['get', 'web'], true], ['!=', ['get', 'by'], 'sonetix']],
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 2.4, 16, 4.6], 'circle-color': c.grn, 'circle-stroke-color': c.stroke, 'circle-stroke-width': 1.4,
+        'circle-translate': [7, -7], 'circle-translate-anchor': 'viewport', 'circle-opacity': fadeIn, 'circle-stroke-opacity': fadeIn } });
+    map.addLayer({ id: 'labels', type: 'symbol', source: 'biz', minzoom: 15,
+      layout: { 'text-field': ['get', 'name'], 'text-font': FONT, 'text-size': 11.5, 'text-offset': [0, 1.1], 'text-anchor': 'top', 'text-optional': true },
       paint: { 'text-color': c.txt, 'text-halo-color': c.halo, 'text-halo-width': 1.4 } });
     map.addLayer({ id: 'sel-ring', type: 'circle', source: 'sel',
       paint: { 'circle-radius': 14, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': RED, 'circle-stroke-width': 2 } });
     map.addLayer({ id: 'sel-dot', type: 'circle', source: 'sel',
       paint: { 'circle-radius': 9, 'circle-color': RED, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2.5 } });
+  }
+
+  /* tarjeta que aparece sobre el mapa al pasar el cursor */
+  function tipHTML(b) {
+    const rt = ratingOf(b.id), open = isOpen(b), nev = (EVB[b.id] || []).length;
+    return `<div class="mp"><span class="mp-ic">${catIco(b.cat)}</span><div><strong>${esc(b.name)}</strong><small>${CATS[b.cat].label} · ${esc(BAR[b.barrio].name)}</small>
+      <span class="mp-m"><b class="${open ? 'o' : ''}">${open ? 'Abierto' : 'Cerrado'}</b>${rt.n ? ` · ★ ${avgTxt(rt.avg)} (${rt.n})` : ''}${nev ? ' · Evento' : ''}</span></div></div>`;
+  }
+  function setHover(id) {
+    if (!map || !map.getSource('biz')) return;
+    if (hovId && hovId !== id) { try { map.setFeatureState({ source: 'biz', id: hovId }, { hover: false }); } catch { /* ignorar */ } }
+    hovId = id;
+    if (id) { try { map.setFeatureState({ source: 'biz', id }, { hover: true }); } catch { /* ignorar */ } }
+  }
+  function setZoneHover(id) {
+    if (!map || !map.getSource('zones')) return;
+    if (zoneHov && zoneHov !== id) { try { map.setFeatureState({ source: 'zones', id: zoneHov }, { hover: false }); } catch { /* ignorar */ } }
+    zoneHov = id;
+    if (id) { try { map.setFeatureState({ source: 'zones', id }, { hover: true }); } catch { /* ignorar */ } }
+  }
+  function clearHL() { $$('#list .card.hl').forEach(x => x.classList.remove('hl')); }
+  function hoverFromList(id) {
+    const b = BIZ[id]; if (!map || !b) return;
+    if (map.getZoom() < ZOOM_PINS) { setZoneHover(b.barrio); return; }
+    setHover(id);
+    if (hoverPopup) hoverPopup.setLngLat([b.lng, b.lat]).setHTML(tipHTML(b)).addTo(map);
+  }
+  function clearHoverFromList() { setHover(null); setZoneHover(null); if (hoverPopup) hoverPopup.remove(); }
+
+  function set3D(on) {
+    mapOpt.d3 = on; $('#mt3d').setAttribute('aria-pressed', on);
+    if (!map) return;
+    if (map.getLayer('bld3d')) map.setLayoutProperty('bld3d', 'visibility', on ? 'visible' : 'none');
+    const b = BIZ[state.selected];
+    map.easeTo({ pitch: on ? 58 : 0, bearing: on ? -18 : 0, zoom: on ? Math.max(map.getZoom(), 15.3) : map.getZoom(),
+      center: on && b ? [b.lng, b.lat] : map.getCenter(), duration: reduceMotion ? 0 : 1000 });
+  }
+  function setEvLayer(on) {
+    mapOpt.ev = on; $('#mtEv').setAttribute('aria-pressed', on);
+    if (map && map.getLayer('evring')) map.setLayoutProperty('evring', 'visibility', on ? 'visible' : 'none');
+    if (on && map && map.getZoom() < ZOOM_PINS) toast('Acércate a una zona para ver los negocios con eventos.');
+  }
+  function bindMapTools() {
+    $('#mt3d').addEventListener('click', () => set3D(!mapOpt.d3));
+    $('#mtEv').addEventListener('click', () => setEvLayer(!mapOpt.ev));
+    $('#mtView').addEventListener('click', () => { state.view = !state.view; syncUI(); refresh(); if (!state.view) fit(); });
+    $('#lgBtn').addEventListener('click', () => {
+      const body = $('#lgBody'), open = body.hidden;
+      body.hidden = !open; $('#lgBtn').setAttribute('aria-expanded', open);
+    });
   }
 
   function initMap() {
@@ -214,28 +309,47 @@
           'CooperativeGesturesHandler.WindowsHelpText': 'Usa Ctrl + scroll para acercar el mapa',
           'CooperativeGesturesHandler.MacHelpText': 'Usa ⌘ + scroll para acercar el mapa',
           'CooperativeGesturesHandler.MobileHelpText': 'Usa dos dedos para mover el mapa',
-          'NavigationControl.ZoomIn': 'Acercar', 'NavigationControl.ZoomOut': 'Alejar'
+          'NavigationControl.ZoomIn': 'Acercar', 'NavigationControl.ZoomOut': 'Alejar',
+          'GeolocateControl.FindMyLocation': 'Cerca de mí', 'GeolocateControl.LocationNotAvailable': 'Ubicación no disponible'
         }
       });
       window.dmMap = map; // útil para depurar en la consola
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+      const geo = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: false }, trackUserLocation: false, showAccuracyCircle: false, fitBoundsOptions: { maxZoom: 15 } });
+      map.addControl(geo, 'top-right');
+      geo.on('error', () => toast('No pudimos acceder a tu ubicación. Revisa el permiso del navegador.'));
       map.on('style.load', addLayers);
       map.on('load', () => { map.resize(); fit(false); if (!reduceMotion) requestAnimationFrame(pulse); });
       if ('ResizeObserver' in window) new ResizeObserver(() => map.resize()).observe($('#map'));
+
+      let mvT;
+      map.on('moveend', () => { if (!state.view) return; clearTimeout(mvT); mvT = setTimeout(() => refresh(), 180); });
+
       map.on('click', 'pins', e => select(e.features[0].properties.id, { from: 'map' }));
-      map.on('click', 'clusters', e => {
-        const f = e.features[0];
-        map.getSource('biz').getClusterExpansionZoom(f.properties.cluster_id).then(z => map.easeTo({ center: f.geometry.coordinates, zoom: z + 0.3, duration: reduceMotion ? 0 : 700 })).catch(() => {});
+      map.on('click', 'zone-bubble', e => {
+        const id = e.features[0].properties.id, z = BAR[id]; if (!z) return;
+        state.barrio = id; closeFicha(); syncUI(); refresh();
+        if (hoverPopup) hoverPopup.remove();
+        map.flyTo({ center: [z.lng, z.lat], zoom: z.zoom, duration: reduceMotion ? 0 : 1100 });
       });
-      map.on('mouseenter', 'clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', 'clusters', () => { map.getCanvas().style.cursor = ''; });
-      hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14 });
+
+      hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 16, className: 'tip' });
       map.on('mouseenter', 'pins', e => {
         map.getCanvas().style.cursor = 'pointer';
-        const f = e.features[0];
-        hoverPopup.setLngLat(f.geometry.coordinates).setText(f.properties.name).addTo(map);
+        const f = e.features[0], id = f.properties.id, b = BIZ[id]; if (!b) return;
+        setHover(id);
+        hoverPopup.setLngLat(f.geometry.coordinates).setHTML(tipHTML(b)).addTo(map);
+        clearHL(); const card = $(`#list .card[data-id="${id}"]`);
+        if (card) { card.classList.add('hl'); card.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' }); }
       });
-      map.on('mouseleave', 'pins', () => { map.getCanvas().style.cursor = ''; hoverPopup.remove(); });
+      map.on('mouseleave', 'pins', () => { map.getCanvas().style.cursor = ''; setHover(null); hoverPopup.remove(); clearHL(); });
+      map.on('mouseenter', 'zone-bubble', e => {
+        map.getCanvas().style.cursor = 'pointer';
+        const f = e.features[0], p = f.properties;
+        setZoneHover(p.id);
+        hoverPopup.setLngLat(f.geometry.coordinates).setHTML(`<div class="mp"><div><strong>${esc(p.name)}</strong><small>${p.count} ${p.count === 1 ? 'negocio' : 'negocios'} · toca para explorar</small></div></div>`).addTo(map);
+      });
+      map.on('mouseleave', 'zone-bubble', () => { map.getCanvas().style.cursor = ''; setZoneHover(null); hoverPopup.remove(); });
       map.on('error', ev => { if (!map.loaded() && ev && ev.error && /Failed to fetch|NetworkError/i.test(String(ev.error.message))) $('#mapFallback').hidden = false; });
     }).catch(() => { $('#mapFallback').hidden = false; });
   }
@@ -250,7 +364,7 @@
   }
 
   function fit(animate = true) {
-    if (!map) return;
+    if (!map || state.view) return;
     const list = filtered();
     if (!list.length) return;
     if (list.length === 1) { map.easeTo({ center: [list[0].lng, list[0].lat], zoom: 15.4, duration: animate ? 800 : 0 }); return; }
@@ -282,7 +396,7 @@
     renderList(list);
     $('#count').textContent = `${list.length} ${list.length === 1 ? 'negocio' : 'negocios'}`;
     $('#clearBtn').hidden = !anyFilter();
-    if (map && map.getSource('biz')) map.getSource('biz').setData(toFC(list));
+    pushData(list);
     if (doFit) fit();
   }
 
@@ -293,6 +407,7 @@
     $('#webTgl').setAttribute('aria-pressed', state.web);
     $('#evTgl').setAttribute('aria-pressed', state.ev);
     $('#topTgl').setAttribute('aria-pressed', state.top);
+    $('#mtView').setAttribute('aria-pressed', state.view);
     $('#q').value = state.q;
   }
 
@@ -333,10 +448,13 @@
       clearTimeout(qT); qT = setTimeout(() => fit(), 350);
     });
     $('#clearBtn').addEventListener('click', () => {
-      Object.assign(state, { q: '', barrio: '', open: false, web: false, ev: false, top: false }); state.cats.clear();
+      Object.assign(state, { q: '', barrio: '', open: false, web: false, ev: false, top: false, view: false }); state.cats.clear();
       syncUI(); refresh({ doFit: true });
     });
     listEl.addEventListener('click', e => { const c = e.target.closest('.card'); if (c) select(c.dataset.id, { from: 'list' }); });
+    listEl.addEventListener('mouseover', e => { const c = e.target.closest('.card'); if (c && matchMedia('(hover: hover)').matches) hoverFromList(c.dataset.id); });
+    listEl.addEventListener('mouseleave', clearHoverFromList);
+    bindMapTools();
 
     $('#quickCats').addEventListener('click', e => {
       const c = e.target.closest('.qchip'); if (!c) return;

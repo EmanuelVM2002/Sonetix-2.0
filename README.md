@@ -10,6 +10,11 @@ node serve.js 8861
 
 y abre http://localhost:8861 (necesita internet: carga MapLibre desde unpkg y el mapa base desde OpenFreeMap).
 
+## Mapa
+
+- **Menos saturado:** al alejarse se ven solo burbujas por barrio (nombre y cantidad); los negocios aparecen al acercarse. Las calles menores, los nombres secundarios y los edificios salen solo con zoom alto, y la leyenda es plegable.
+- **Más interactivo:** al pasar el cursor por la lista o por un punto aparece una tarjeta con categoría, estrellas, si está abierto y si tiene evento (y se resalta en ambos lados). Tocar una burbuja lleva al barrio y filtra la lista. Botones del mapa: **3D** (inclina el mapa y muestra edificios), **Eventos** (resalta negocios con eventos), **Esta zona** (la lista muestra solo lo que se ve en el mapa) y **Cerca de mí** (pide permiso de ubicación solo al tocarlo).
+
 ## Eventos, calificaciones y comentarios
 
 - **Eventos:** sección `#eventos` con filtros (hoy, esta semana, tipo), detalle de cada evento y «Publicar un evento» para negocios. Los eventos enviados llegan al panel como «Evento por revisar» y no se publican solos.

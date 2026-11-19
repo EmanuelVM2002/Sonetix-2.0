@@ -597,3 +597,31 @@ html[data-theme="light"] .ha-map{box-shadow:0 40px 70px -34px rgba(5,5,5,.45),0 
 html[data-theme="light"] .form input[type=date],html[data-theme="light"] .form input[type=time]{color-scheme:light}
 .form input[type=date]:focus,.form input[type=time]:focus{outline:0;border-color:var(--red);box-shadow:0 0 0 3px var(--glow)}
 @media (max-width:520px){.ev-grid{grid-template-columns:minmax(0,1fr)}}
+
+
+/* =========================================================
+   MAPA · herramientas, leyenda plegable y tarjeta al pasar el cursor
+   ========================================================= */
+.mtools{position:absolute;left:12px;top:12px;z-index:2;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
+.mt{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:99px;background:var(--hdr);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--ln);font-size:.78rem;font-weight:700;color:var(--mut);transition:color .18s,border-color .18s,background .18s,box-shadow .18s}
+.mt:hover{color:var(--ink);border-color:var(--ln2)}
+.mt[aria-pressed="true"]{color:#fff;background:var(--red);border-color:var(--red);box-shadow:0 6px 20px -8px var(--red)}
+.mt svg{width:16px;height:16px;flex:none}
+.lgd{position:absolute;left:12px;bottom:28px;z-index:2}
+.lgd-body{position:absolute;bottom:100%;left:0;margin-bottom:8px;min-width:230px;display:grid;gap:9px;padding:14px 16px;border-radius:16px;background:var(--hdr);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--ln);box-shadow:var(--shadow);font-size:.78rem;color:var(--mut);animation:pop .25s var(--ease)}
+.lgd-body span{display:flex;align-items:center;gap:9px}
+.lgd-note{font-size:.7rem;color:var(--mut2);border-top:1px solid var(--ln);padding-top:9px;margin-top:2px}
+.lg-ev{border:1.5px solid var(--red);background:transparent}
+.card.hl{background:var(--s2);border-color:var(--ln2)}
+
+/* tarjeta flotante del mapa */
+.maplibregl-popup.tip .maplibregl-popup-content{padding:10px 12px!important;border-radius:14px!important}
+.mp{display:flex;gap:10px;align-items:flex-start;min-width:176px;font-weight:400}
+.mp strong{display:block;font-size:.88rem;line-height:1.25}
+.mp small{display:block;color:var(--mut);font-size:.76rem;margin-top:1px}
+.mp-m{display:block;margin-top:4px;font-size:.74rem;font-weight:600;color:var(--mut)}
+.mp-m b{font-weight:700;color:var(--mut2)}
+.mp-m b.o{color:var(--grn)}
+.mp-ic{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--s3)}
+.mp-ic .ico{width:17px;height:17px;color:var(--ink)}
+@media (max-width:520px){.mt{padding:7px 11px}.lgd{bottom:34px}}
