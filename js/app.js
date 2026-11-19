@@ -730,15 +730,42 @@
     ['M13 2L4 14h7l-1 8 9-12h-7l1-8z', 'Automatizaciones', 'Respuestas, reservas y avisos sin trabajo manual.'],
     ['M3 17l6-6 4 4 8-8M15 7h6v6', 'Mantenimiento y SEO', 'Cambios al día y mejor posición cuando te buscan en Google.']
   ];
+  /* Trabajos reales de SONETIX: capturas de sitios publicados. Todo lo que dice cada caso se puede ver en el sitio.
+     Para ocultar un caso (por ejemplo si un cliente no autoriza mostrarlo) pon `show: false`. */
   const CASES = [
-    ['Carta digital con QR', 'Para restaurantes y bares: el cliente escanea, elige y llama al mesero desde su celular.', [30, 52, 40, 64]],
-    ['Sitio de varias sedes', 'Para negocios con más de un local: horarios, mapa y carta de cada sede en un solo lugar.', [44, 68, 34, 56]],
-    ['Página de celebraciones', 'Galería de espacios, carta y cotización por WhatsApp para quienes planean una fiesta.', [58, 36, 66, 46]]
+    { show: true, name: 'El Coctelazo', kind: 'Bar · Medellín desde 2017', url: 'https://elcoctelazo.com', shot: 'img/casos/coctelazo.jpg', device: 'desktop', accent: '#ff3d8b',
+      lead: 'La carta completa de un bar con varias sedes, lista para pedir por WhatsApp desde el celular o el computador.',
+      facts: ['Carta por categorías: granizados, micheladas, bombas, litrones, nevecones, cervezas y más', 'Carta de punto de venta y carta de domicilios, con pedido directo por WhatsApp', 'Buscador de sedes, sección de eventos y versión en inglés', 'Aviso en vivo de si el bar está abierto ahora'],
+      tags: ['Carta digital', 'Domicilios', 'Varias sedes', 'ES / EN'] },
+    { show: true, name: 'Coctelazo & Perritos Gourmet', kind: 'Bar y comida gourmet · Provenza', url: 'https://elcoctelazoprovenza.emanuelvillada10.workers.dev', shot: 'img/casos/provenza.jpg', device: 'phone', accent: '#ff4f9a',
+      lead: 'Una carta que se abre al escanear el QR de la mesa: el cliente elige cómo quiere pedir y el pedido llega directo a la barra.',
+      facts: ['Pedido en la mesa con QR, o a domicilio por WhatsApp, o solo ver la carta', 'Carrito «Mi pedido» y botón para llamar al mesero', 'Horarios de domicilios y de cocina siempre visibles', 'Español e inglés'],
+      tags: ['Carta con QR por mesa', 'Pedidos', 'Domicilios'] },
+    { show: true, name: 'Gro’smania Heladería', kind: 'Heladería', url: 'https://grosmania.emanuelvillada10.workers.dev', shot: 'img/casos/grosmania.jpg', device: 'desktop', accent: '#0d9a86',
+      lead: 'Una carta de copas, waffles y fresas con crema pensada para que cualquier persona pueda pedir sin enredos.',
+      facts: ['Pedido por WhatsApp eligiendo los sabores de helado', 'Club de puntos para clientes frecuentes', 'Opiniones de clientes y carta por categorías', 'Panel para que el negocio edite su propia carta, sabores y ajustes'],
+      tags: ['Pedidos por WhatsApp', 'Club de puntos', 'Panel de administración'] }
   ];
+  const EXT = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg>';
+  function caseHTML(c, i) {
+    const host = new URL(c.url).host;
+    return `<article class="case2${i % 2 ? ' flip' : ''}" style="--ca:${c.accent}">
+      <a class="c2-shot" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir el sitio de ${esc(c.name)} en una pestaña nueva">
+        <span class="c2-frame ${c.device}"><span class="c2-bar"><i></i><i></i><i></i><em>${esc(host)}</em></span>
+          <img src="${esc(c.shot)}" alt="Captura del sitio publicado de ${esc(c.name)}" loading="lazy"></span>
+        <span class="c2-hint">Visitar ${EXT}</span>
+      </a>
+      <div class="c2-body">
+        <span class="c2-kind">${esc(c.kind)}</span>
+        <h4>${esc(c.name)}</h4>
+        <p class="c2-lead">${esc(c.lead)}</p>
+        <ul class="c2-facts">${c.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+        <div class="tags">${c.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+        <a class="btn btn-ghost" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Ver el sitio ${EXT}</a>
+      </div></article>`;
+  }
   $('#svcGrid').innerHTML = SERVICES.map(([d, t, p]) => `<div>${rawIco(d)}<strong>${t}</strong><p>${p}</p></div>`).join('');
-  $('#casesGrid').innerHTML = CASES.map(([t, p, bars]) => `<article class="case"><div class="case-art"><em>Ejemplo</em>
-    <div class="m">${bars.map((h, i) => `<i class="${i === 1 ? 'r' : ''}" style="height:${h + 16}px"></i>`).join('')}</div></div>
-    <div class="case-b"><strong>${t}</strong><p>${p}</p></div></article>`).join('');
+  $('#casesGrid').innerHTML = CASES.filter(c => c.show).map(caseHTML).join('');
 
   /* ---------- modal ---------- */
   const modal = $('#modal'); let modalFocus = null;
