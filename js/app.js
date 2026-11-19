@@ -123,7 +123,8 @@
   let map = null, baseStyle = null, hoverPopup = null, hovId = null, zoneHov = null;
   const FONT = ['Noto Sans Regular'];
   const ZOOM_PINS = 13.9;                       // por debajo se ven zonas; por encima, negocios
-  const mapOpt = { d3: false, ev: false };
+  const mapOpt = { d3: true, ev: false };
+  const TILT = { pitch: 52, bearing: -14 };
 
   async function getStyle() {
     if (!baseStyle) baseStyle = await (await fetch('https://tiles.openfreemap.org/styles/positron')).json();
@@ -134,7 +135,7 @@
   }
   /* Menos ruido: lo menor aparece solo al acercarse y se quitan contornos y etiquetas secundarias. */
   function declutter(s) {
-    const minz = { highway_path: 15.5, highway_minor: 14.4, 'highway-name-path': 17, 'highway-name-minor': 16.5, 'highway-name-major': 15, label_other: 14.6, building: 15.4, waterway: 13.5, landuse_residential: 13 };
+    const minz = { highway_path: 15.5, highway_minor: 14.4, 'highway-name-path': 17, 'highway-name-minor': 16.5, 'highway-name-major': 15, label_other: 14.6, label_village: 14.2, building: 15.4, waterway: 13.5, landuse_residential: 13 };
     for (const l of s.layers) {
       if (minz[l.id] != null) l.minzoom = Math.max(l.minzoom || 0, minz[l.id]);
       if (/^(waterway_line_label|water_name_point_label|water_name_line_label|airport)$/.test(l.id) || /shield/.test(l.id)) (l.layout = l.layout || {}).visibility = 'none';
@@ -281,7 +282,7 @@
     if (!map) return;
     if (map.getLayer('bld3d')) map.setLayoutProperty('bld3d', 'visibility', on ? 'visible' : 'none');
     const b = BIZ[state.selected];
-    map.easeTo({ pitch: on ? 58 : 0, bearing: on ? -18 : 0, zoom: on ? Math.max(map.getZoom(), 15.3) : map.getZoom(),
+    map.easeTo({ pitch: on ? TILT.pitch : 0, bearing: on ? TILT.bearing : 0, zoom: on && b ? Math.max(map.getZoom(), 15.3) : map.getZoom(),
       center: on && b ? [b.lng, b.lat] : map.getCenter(), duration: reduceMotion ? 0 : 1000 });
   }
   function setEvLayer(on) {
@@ -303,7 +304,8 @@
     if (typeof maplibregl === 'undefined') { $('#mapFallback').hidden = false; return; }
     getStyle().then(style => {
       map = new maplibregl.Map({
-        container: 'map', style, center: [-75.5812, 6.2442], zoom: 12.1, minZoom: 10, maxZoom: 18,
+        container: 'map', style, center: [-75.5812, 6.2442], zoom: 12.1, minZoom: 10, maxZoom: 18, maxPitch: 70,
+        pitch: mapOpt.d3 ? TILT.pitch : 0, bearing: mapOpt.d3 ? TILT.bearing : 0,
         attributionControl: { compact: true }, cooperativeGestures: true,
         locale: {
           'CooperativeGesturesHandler.WindowsHelpText': 'Usa Ctrl + scroll para acercar el mapa',
@@ -370,7 +372,7 @@
     if (list.length === 1) { map.easeTo({ center: [list[0].lng, list[0].lat], zoom: 15.4, duration: animate ? 800 : 0 }); return; }
     const b = new maplibregl.LngLatBounds();
     list.forEach(x => b.extend([x.lng, x.lat]));
-    map.fitBounds(b, { padding: { top: 70, bottom: isMobile() ? 140 : 90, left: 50, right: 50 }, maxZoom: 15.4, duration: animate && !reduceMotion ? 900 : 0 });
+    map.fitBounds(b, { padding: { top: 70, bottom: isMobile() ? 140 : 90, left: 50, right: 50 }, maxZoom: 15.4, pitch: mapOpt.d3 ? TILT.pitch : 0, bearing: mapOpt.d3 ? TILT.bearing : 0, duration: animate && !reduceMotion ? 900 : 0 });
   }
 
   /* ---------- lista y filtros ---------- */
@@ -394,14 +396,16 @@
   function refresh({ doFit = false } = {}) {
     const list = filtered();
     renderList(list);
-    $('#count').textContent = `${list.length} ${list.length === 1 ? 'negocio' : 'negocios'}`;
+    $('#count').textContent = `${list.length} ${list.length === 1 ? 'negocio' : 'negocios'}` + (state.cats.size ? ' · ' + [...state.cats].map(id => CATS[id].label).join(', ') : '');
     $('#clearBtn').hidden = !anyFilter();
     pushData(list);
     if (doFit) fit();
   }
 
   function syncUI() {
-    $$('#catChips .chip').forEach(c => c.setAttribute('aria-pressed', state.cats.has(c.dataset.id)));
+    $$('#catChips .cat').forEach(c => c.setAttribute('aria-pressed', state.cats.has(c.dataset.id)));
+    const nf = [state.barrio, state.open, state.web, state.ev, state.top].filter(Boolean).length;
+    $('#fBadge').hidden = !nf; $('#fBadge').textContent = nf;
     $('#barrioSel').value = state.barrio;
     $('#openTgl').setAttribute('aria-pressed', state.open);
     $('#webTgl').setAttribute('aria-pressed', state.web);
@@ -412,7 +416,7 @@
   }
 
   function buildControls() {
-    $('#catChips').innerHTML = CATEGORIES.map(c => `<button class="chip" type="button" data-id="${c.id}" aria-pressed="false">${catIco(c.id)}${c.label}</button>`).join('');
+    $('#catChips').innerHTML = CATEGORIES.map(c => `<button class="cat" type="button" data-id="${c.id}" aria-pressed="false" aria-label="${c.label}" title="${c.label}">${catIco(c.id)}</button>`).join('');
     $('#barrioSel').innerHTML = `<option value="">Todos los barrios</option>` + BARRIOS.map(b => `<option value="${b.id}">${esc(b.name)}</option>`).join('');
     $('#quickCats').innerHTML = CATEGORIES.slice(0, 6).map(c => `<button class="qchip" type="button" data-id="${c.id}">${catIco(c.id)}${c.label}</button>`).join('');
     const openNow = BUSINESSES.filter(isOpen).length;
@@ -430,12 +434,12 @@
 
   function bindFilters() {
     $('#catChips').addEventListener('click', e => {
-      const c = e.target.closest('.chip'); if (!c) return;
+      const c = e.target.closest('.cat'); if (!c) return;
       state.cats.has(c.dataset.id) ? state.cats.delete(c.dataset.id) : state.cats.add(c.dataset.id);
       closeFicha(); syncUI(); refresh({ doFit: true });
     });
     $('#barrioSel').addEventListener('change', e => {
-      state.barrio = e.target.value; closeFicha(); refresh({ doFit: false });
+      state.barrio = e.target.value; closeFicha(); syncUI(); refresh({ doFit: false });
       if (state.barrio && map) { const b = BAR[state.barrio]; map.flyTo({ center: [b.lng, b.lat], zoom: b.zoom, duration: reduceMotion ? 0 : 1200 }); } else fit();
     });
     $('#openTgl').addEventListener('click', () => { state.open = !state.open; syncUI(); refresh({ doFit: true }); });
@@ -454,6 +458,10 @@
     listEl.addEventListener('click', e => { const c = e.target.closest('.card'); if (c) select(c.dataset.id, { from: 'list' }); });
     listEl.addEventListener('mouseover', e => { const c = e.target.closest('.card'); if (c && matchMedia('(hover: hover)').matches) hoverFromList(c.dataset.id); });
     listEl.addEventListener('mouseleave', clearHoverFromList);
+    $('#fBtn').addEventListener('click', () => {
+      const p = $('#fPanel'), open = p.hidden;
+      p.hidden = !open; $('#fBtn').setAttribute('aria-expanded', open);
+    });
     bindMapTools();
 
     $('#quickCats').addEventListener('click', e => {

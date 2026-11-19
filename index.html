@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#050505">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23050505'/%3E%3Cg fill='%23ff0a1e'%3E%3Crect x='6' y='13' width='4' height='8' rx='2'/%3E%3Crect x='12' y='7' width='4' height='18' rx='2'/%3E%3Crect x='18' y='11' width='4' height='12' rx='2'/%3E%3Crect x='24' y='9' width='3' height='14' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=14">
+<link rel="stylesheet" href="css/style.css?v=15">
 </head>
 <body>
 
@@ -132,19 +132,27 @@
   <div class="explorer wrap-wide" id="explorer">
     <aside class="panel" id="panel" aria-label="Lista de negocios">
       <div class="panel-top">
-        <div class="field">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <input id="q" type="search" placeholder="Buscar por nombre, plan o servicio" aria-label="Buscar en el mapa">
+        <div class="srch-row">
+          <div class="field">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="q" type="search" placeholder="Buscar negocio o plan" aria-label="Buscar en el mapa">
+          </div>
+          <button class="fbtn" id="fBtn" type="button" aria-expanded="false" aria-controls="fPanel" title="Más filtros">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+            <span>Filtros</span><b id="fBadge" hidden>0</b>
+          </button>
         </div>
-        <div class="chips" id="catChips" role="group" aria-label="Categorías"></div>
-        <div class="row-f">
+        <div class="cats" id="catChips" role="group" aria-label="Categorías"></div>
+        <div class="fpanel" id="fPanel" hidden>
           <label class="sel"><span class="sr">Barrio</span>
             <select id="barrioSel"></select>
           </label>
-          <button class="tgl" id="openTgl" type="button" aria-pressed="false"><i></i>Abierto ahora</button>
-          <button class="tgl" id="webTgl" type="button" aria-pressed="false"><i></i>Con web oficial</button>
-          <button class="tgl" id="evTgl" type="button" aria-pressed="false"><i></i>Con eventos</button>
-          <button class="tgl" id="topTgl" type="button" aria-pressed="false"><i></i>4 estrellas o más</button>
+          <div class="fgrid">
+            <button class="tgl" id="openTgl" type="button" aria-pressed="false"><i></i>Abierto ahora</button>
+            <button class="tgl" id="webTgl" type="button" aria-pressed="false"><i></i>Con web oficial</button>
+            <button class="tgl" id="evTgl" type="button" aria-pressed="false"><i></i>Con eventos</button>
+            <button class="tgl" id="topTgl" type="button" aria-pressed="false"><i></i>4 estrellas o más</button>
+          </div>
         </div>
         <div class="count-row"><span id="count" aria-live="polite"></span><button class="link" id="clearBtn" type="button" hidden>Limpiar filtros</button></div>
       </div>
@@ -158,7 +166,7 @@
     <div class="mapwrap">
       <div id="map" role="application" aria-label="Mapa interactivo de Medellín"></div>
       <div class="mtools" role="group" aria-label="Herramientas del mapa">
-        <button class="mt" id="mt3d" type="button" aria-pressed="false" title="Inclina el mapa y muestra los edificios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>3D</button>
+        <button class="mt" id="mt3d" type="button" aria-pressed="true" title="Inclina el mapa y muestra los edificios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>3D</button>
         <button class="mt" id="mtEv" type="button" aria-pressed="false" title="Resalta los negocios con eventos próximos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5.5 5.5 2-5.5 2L12 18l-2-5.5L4.5 10.500l5.500-2L12 3z"/></svg>Eventos</button>
         <button class="mt" id="mtView" type="button" aria-pressed="false" title="La lista muestra solo lo que ves en el mapa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg>Esta zona</button>
       </div>
@@ -171,7 +179,7 @@
           <span><i class="lg lg-ev"></i>Con eventos (botón «Eventos»)</span>
           <p class="lgd-note">Datos de ejemplo. El mapa se alimentará con negocios reales.</p>
         </div>
-        <button class="mt" id="lgBtn" type="button" aria-expanded="false" aria-controls="lgBody">Leyenda</button>
+        <button class="mt mt-i" id="lgBtn" type="button" aria-expanded="false" aria-controls="lgBody" aria-label="Leyenda del mapa" title="Leyenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>
       </div>
       <div class="map-fallback" id="mapFallback" hidden>No se pudo cargar el mapa. Revisa tu conexión e inténtalo de nuevo.</div>
     </div>
@@ -379,6 +387,6 @@
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="js/data.js?v=3"></script>
-<script src="js/app.js?v=12"></script>
+<script src="js/app.js?v=16"></script>
 </body>
 </html>

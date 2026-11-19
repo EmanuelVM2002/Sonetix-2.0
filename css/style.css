@@ -625,3 +625,45 @@ html[data-theme="light"] .form input[type=date],html[data-theme="light"] .form i
 .mp-ic{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--s3)}
 .mp-ic .ico{width:17px;height:17px;color:var(--ink)}
 @media (max-width:520px){.mt{padding:7px 11px}.lgd{bottom:34px}}
+
+
+/* =========================================================
+   PANEL COMPACTO + BOTONES DEL MAPA REDISEÑADOS
+   ========================================================= */
+.panel-top{padding:14px 14px 10px;gap:10px}
+.srch-row{display:flex;gap:8px}
+.srch-row .field{flex:1;min-width:0}
+.fbtn{position:relative;flex:none;display:inline-flex;align-items:center;gap:7px;padding:0 13px;border-radius:12px;background:var(--s2);border:1px solid var(--ln);font-weight:700;font-size:.82rem;color:var(--mut);transition:color .18s,border-color .18s,background .18s}
+.fbtn:hover{color:var(--ink);border-color:var(--ln2)}
+.fbtn[aria-expanded="true"]{color:var(--ink);border-color:var(--red);background:var(--s3)}
+.fbtn svg{width:17px;height:17px;flex:none}
+.fbtn b{min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--red);color:#fff;font-size:.68rem;font-weight:800;display:grid;place-items:center}
+
+/* categorías: una fila de íconos */
+.cats{display:flex;gap:6px}
+.cat{flex:1 1 0;max-width:46px;height:38px;border-radius:12px;display:grid;place-items:center;background:var(--s2);border:1px solid var(--ln);color:var(--mut);transition:color .18s,border-color .18s,background .18s,transform .18s var(--ease)}
+.cat:hover{color:var(--ink);border-color:var(--ln2);transform:translateY(-1px)}
+.cat[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 6px 18px -8px var(--red)}
+.cat .ico{width:18px;height:18px}
+
+/* filtros extra: plegados hasta que se piden */
+.fpanel{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--ln);border-radius:14px;background:var(--s2);animation:pop .22s var(--ease)}
+.fpanel .sel{min-width:0}
+.fpanel .sel select{background-color:var(--s1)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fgrid .tgl{justify-content:flex-start;background:var(--s1);padding:8px 10px;font-size:.78rem}
+.count-row{min-height:18px}
+
+/* barra del mapa: una sola píldora segmentada */
+.mtools{gap:0;padding:3px;border-radius:99px;background:var(--hdr);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--ln);flex-wrap:nowrap;max-width:calc(100% - 60px)}
+.mtools .mt{background:transparent;border-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;padding:7px 12px;box-shadow:none}
+.mtools .mt:hover{background:var(--s2);color:var(--ink)}
+.mtools .mt[aria-pressed="true"]{background:var(--red);color:#fff;box-shadow:0 4px 14px -6px var(--red)}
+.mt-i{width:34px;height:34px;padding:0;justify-content:center}
+
+/* controles laterales del mapa más pequeños y discretos */
+.maplibregl-ctrl-top-right .maplibregl-ctrl{margin:10px 10px 0 0}
+.maplibregl-ctrl-group{opacity:.82;transition:opacity .2s;border-radius:10px!important}
+.maplibregl-ctrl-group:hover{opacity:1}
+.maplibregl-ctrl-group button{width:30px;height:30px}
+@media (max-width:520px){.mtools .mt{padding:7px 10px}}

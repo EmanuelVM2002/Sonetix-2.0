@@ -349,7 +349,7 @@
   }
   /* Mismo estilo limpio que el sitio público: lo menor aparece solo al acercarse. */
   function declutter(s) {
-    const minz = { highway_path: 15.5, highway_minor: 14.4, 'highway-name-path': 17, 'highway-name-minor': 16.5, 'highway-name-major': 15, label_other: 14.6, building: 15.4, waterway: 13.5, landuse_residential: 13 };
+    const minz = { highway_path: 15.5, highway_minor: 14.4, 'highway-name-path': 17, 'highway-name-minor': 16.5, 'highway-name-major': 15, label_other: 14.6, label_village: 14.2, building: 15.4, waterway: 13.5, landuse_residential: 13 };
     for (const l of s.layers) {
       if (minz[l.id] != null) l.minzoom = Math.max(l.minzoom || 0, minz[l.id]);
       if (/^(waterway_line_label|water_name_point_label|water_name_line_label|airport)$/.test(l.id) || /shield/.test(l.id)) (l.layout = l.layout || {}).visibility = 'none';
