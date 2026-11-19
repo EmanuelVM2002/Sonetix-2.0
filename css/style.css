@@ -667,3 +667,73 @@ html[data-theme="light"] .form input[type=date],html[data-theme="light"] .form i
 .maplibregl-ctrl-group:hover{opacity:1}
 .maplibregl-ctrl-group button{width:30px;height:30px}
 @media (max-width:520px){.mtools .mt{padding:7px 10px}}
+
+
+/* =========================================================
+   FICHA · galería, visor de fotos, horario semanal, subida de fotos
+   ========================================================= */
+.f-gal{position:relative;height:210px;display:grid;grid-template-columns:1.6fr 1fr;grid-template-rows:1fr 1fr;gap:3px;background:var(--bg);border-bottom:1px solid var(--ln);overflow:hidden}
+.gm{position:relative;padding:0;border:0;background:var(--s2);overflow:hidden;cursor:zoom-in;min-width:0;min-height:0}
+.gm.main{grid-row:1 / span 2}
+.gm img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s var(--ease)}
+.gm:hover img,.gm:hover .ph{transform:scale(1.05)}
+.gm:focus-visible{outline-offset:-3px}
+.ph{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;transition:transform .5s var(--ease);
+  background:radial-gradient(circle at var(--x) var(--y),rgba(255,10,30,.30),transparent 58%),linear-gradient(var(--a),var(--s3),var(--s2))}
+.ph .ico{width:34%;height:34%;max-width:64px;max-height:64px;stroke-width:1.2;opacity:.78;color:var(--ink)}
+.ph em{position:absolute;left:8px;bottom:6px;font-style:normal;font-size:.62rem;color:var(--mut2);letter-spacing:.04em}
+.gm:not(.main) .ph em{display:none}
+.ph.big{border-radius:18px}
+.ph.big .ico{width:30%;height:30%;max-width:140px;max-height:140px}
+.ph.big em{font-size:.8rem;left:16px;bottom:12px}
+.f-all{position:absolute;right:10px;bottom:10px;z-index:2;display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;background:var(--hdr);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--ln2);font-size:.74rem;font-weight:700;color:var(--ink);transition:background .2s,border-color .2s}
+.f-all:hover{border-color:var(--red)}
+.f-share{position:absolute;top:12px;right:58px;z-index:2;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--hdr);backdrop-filter:blur(8px);border:1px solid var(--ln2);transition:border-color .2s}
+.f-share:hover{border-color:var(--red)}
+.f-gal .f-x,.f-gal .f-save{z-index:3}
+
+/* horario semanal desplegable */
+.wk{flex:1;min-width:0}
+.wk summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;color:var(--ink)}
+.wk summary::-webkit-details-marker{display:none}
+.wk summary i{width:8px;height:8px;border:solid var(--mut);border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-3px;transition:transform .25s var(--ease)}
+.wk[open] summary i{transform:rotate(-135deg);margin-top:3px}
+.wk ul{margin-top:8px;display:grid;gap:2px;font-size:.84rem}
+.wk li{display:flex;justify-content:space-between;padding:5px 8px;border-radius:8px;color:var(--mut)}
+.wk li.today{background:var(--s2);color:var(--ink);font-weight:700}
+.f-info div:has(.wk){align-items:flex-start}
+.f-info div:has(.wk) .ico{margin-top:2px}
+
+/* visor de fotos */
+.lb{position:fixed;inset:0;z-index:95;display:grid;grid-template-columns:72px minmax(0,1fr) 72px;align-items:center;padding:20px;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.lb[hidden]{display:none}
+.lb-fig{margin:0;display:flex;flex-direction:column;gap:12px;align-items:center;min-width:0;max-height:100%}
+.lb-img{position:relative;width:100%;max-width:1000px;aspect-ratio:3/2;max-height:72vh;border-radius:18px;overflow:hidden;background:var(--s2);box-shadow:0 30px 80px -30px #000}
+.lb-img img{width:100%;height:100%;object-fit:contain;background:#000}
+.lb-img .ph{border-radius:0}
+.lb figcaption{color:#e8e8ec;font-size:.92rem;text-align:center}
+.lb-dots{display:flex;gap:8px}
+.lb-dots button{width:8px;height:8px;padding:0;border-radius:50%;border:0;background:#4a4c55;transition:transform .2s,background .2s}
+.lb-dots button[aria-current="true"]{background:var(--red);transform:scale(1.4)}
+.lb-nav,.lb-x{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#fff;transition:background .2s,border-color .2s}
+.lb-nav:hover,.lb-x:hover{background:var(--red);border-color:var(--red)}
+.lb-nav.prev{justify-self:start}.lb-nav.next{justify-self:end}
+.lb-x{position:absolute;top:18px;right:18px;z-index:2}
+@media (max-width:700px){.lb{grid-template-columns:44px minmax(0,1fr) 44px;padding:12px}.lb-nav{width:40px;height:40px}}
+
+/* subida de fotos al reclamar */
+.up{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px dashed var(--ln2);border-radius:14px;background:var(--s2)}
+.up-t{margin:0;font-size:.88rem;font-weight:700;color:var(--ink)}
+.up-drop{display:flex!important;flex-direction:row!important;align-items:center;gap:12px!important;padding:14px;border:1px solid var(--ln);border-radius:12px;background:var(--s1);cursor:pointer;font-weight:400!important;transition:border-color .2s}
+.up-drop:hover,.up-drop:focus-within{border-color:var(--red)}
+.up-drop svg{flex:none;color:var(--redt)}
+.up-drop strong{display:block;color:var(--ink);font-size:.9rem}
+.up-drop small{color:var(--mut);font-size:.78rem}
+.up-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.up-grid:empty{display:none}
+.up-i{position:relative;margin:0;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--ln)}
+.up-i img{width:100%;height:100%;object-fit:cover;display:block}
+.up-i button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.7);color:#fff;font-size:1rem;line-height:1;display:grid;place-items:center}
+.up-i button:hover{background:var(--red)}
+.up-n{margin:0;font-size:.76rem;color:var(--mut)}
+.up-n:empty{display:none}

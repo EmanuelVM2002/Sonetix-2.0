@@ -481,6 +481,73 @@
   const ficha = $('#ficha'), sheetBg = $('#sheetBg');
   let lastFocus = null;
 
+  function copyText(text) {
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove(); return ok ? Promise.resolve() : Promise.reject(new Error('copy'));
+    };
+    return navigator.clipboard ? navigator.clipboard.writeText(text).catch(fallback) : fallback();
+  }
+
+  /* ---------- galería de fotos, visor, horario semanal ---------- */
+  const PH_CAPS = {
+    rest: ['El salón', 'Platos de la casa', 'La terraza', 'La cocina'],
+    cafe: ['El local', 'Café y repostería', 'La barra', 'Un rincón favorito'],
+    bar: ['La barra', 'Coctelería', 'El ambiente', 'La terraza'],
+    moda: ['La tienda', 'Nueva colección', 'Los probadores', 'La vitrina'],
+    belleza: ['El salón', 'Nuestros servicios', 'Zona de espera', 'El equipo'],
+    libros: ['La librería', 'Novedades', 'Rincón de lectura', 'Los estantes'],
+    ocio: ['El espacio', 'Actividades', 'Eventos', 'Zona de grupos'],
+    emprend: ['El taller', 'Productos', 'El proceso', 'Pedidos']
+  };
+  /* Si el negocio trae `photos: [{src, alt, cap}]` se usan; si no, composiciones de ejemplo claramente marcadas. */
+  function photosOf(b) {
+    const caps = PH_CAPS[b.cat] || PH_CAPS.emprend;
+    if (b.photos && b.photos.length) return b.photos.map((p, i) => ({ src: p.src, alt: p.alt, cap: p.cap || caps[i] || 'Foto' }));
+    return caps.map(c => ({ src: null, cap: c }));
+  }
+  function phHTML(b, i, big) {
+    let h = 0; for (const ch of b.id + '-' + i) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return `<span class="ph${big ? ' big' : ''}" style="--a:${h % 360}deg;--x:${20 + (h >> 3) % 60}%;--y:${15 + (h >> 7) % 65}%">${catIco(b.cat)}<em>Foto de ejemplo</em></span>`;
+  }
+  function galleryHTML(b) {
+    const ph = photosOf(b), n = ph.length;
+    const tile = (p, i) => `<button class="gm${i === 0 ? ' main' : ''}" type="button" data-gal="${i}" aria-label="Ver la foto ${i + 1} de ${n}: ${esc(p.cap)}">${p.src ? `<img src="${esc(p.src)}" alt="${esc(p.alt || p.cap)}" loading="lazy">` : phHTML(b, i)}</button>`;
+    return `${ph.slice(0, 3).map(tile).join('')}
+      <button class="f-all" type="button" data-gal="0"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Ver ${n} fotos</button>
+      <button class="f-share" type="button" data-act="share" aria-label="Copiar el enlace de este negocio" title="Copiar enlace"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/></svg></button>`;
+  }
+  const DAYN = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  function weekHTML(b) {
+    const { day } = bogotaNow(), h = b.hours;
+    return `<details class="wk"><summary><b>${hoursToday(b)}</b><i aria-hidden="true"></i></summary><ul>${[1, 2, 3, 4, 5, 6, 0].map(d =>
+      `<li class="${d === day ? 'today' : ''}"><span>${DAYN[d]}</span><span>${h.days.includes(d) ? fmtH(h.open) + ' – ' + fmtH(h.close) : 'Cerrado'}</span></li>`).join('')}</ul></details>`;
+  }
+
+  /* visor de fotos */
+  let lb = { id: null, i: 0 };
+  function lbRender() {
+    const b = BIZ[lb.id], ph = photosOf(b), p = ph[lb.i];
+    $('#lbImg').innerHTML = p.src ? `<img src="${esc(p.src)}" alt="${esc(p.alt || p.cap)}">` : phHTML(b, lb.i, true);
+    $('#lbCap').textContent = `${b.name} · ${p.cap}${p.src ? '' : ' · Foto de ejemplo'}`;
+    $('#lbDots').innerHTML = ph.map((_, i) => `<button type="button" data-lb="go" data-i="${i}" aria-label="Foto ${i + 1}" aria-current="${i === lb.i}"></button>`).join('');
+  }
+  function openLb(id, i) {
+    lb = { id, i: i || 0 }; $('#lb').hidden = false; document.body.style.overflow = 'hidden'; lbRender();
+    $('#lb [data-lb="close"]').focus();
+  }
+  function closeLb() { $('#lb').hidden = true; document.body.style.overflow = ''; }
+  function lbStep(d) { const n = photosOf(BIZ[lb.id]).length; lb.i = (lb.i + d + n) % n; lbRender(); }
+  $('#lb').addEventListener('click', e => {
+    const a = e.target.closest('[data-lb]');
+    if (!a) { if (e.target.id === 'lb' || e.target.closest('.lb-fig') === null) closeLb(); return; }
+    const k = a.dataset.lb;
+    if (k === 'close') closeLb(); else if (k === 'prev') lbStep(-1); else if (k === 'next') lbStep(1); else if (k === 'go') { lb.i = +a.dataset.i; lbRender(); }
+  });
+
   function reviewsHTML(b) {
     const list = reviewsOf(b.id), { n, avg } = ratingOf(b.id), mine = myRev[b.id];
     return `<h4>Calificaciones y comentarios</h4>
@@ -502,7 +569,7 @@
     const open = isOpen(b), fav = favs.includes(b.id);
     const dest = `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}`;
     return `
-      <div class="f-art">${catIco(b.cat)}<small>Foto del negocio (se publica con permiso del dueño)</small>
+      <div class="f-gal">${galleryHTML(b)}
         <button class="f-x" type="button" data-act="close" aria-label="Cerrar ficha"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
         <button class="f-save" type="button" data-act="save" aria-pressed="${fav}" aria-label="${fav ? 'Quitar de guardados' : 'Guardar negocio'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.5 5.3 5.3 0 0 1 21.3 12c-2.300 4.400-9.300 9-9.300 9z"/></svg></button>
       </div>
@@ -513,7 +580,7 @@
         ${b.desc ? `<p class="f-desc">${esc(b.desc)}</p>` : ''}
         ${b.services.length ? `<div class="tags">${b.services.map(s => `<span class="tag">${esc(s)}</span>`).join('')}</div>` : ''}
         <div class="f-info">
-          <div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span><b>${hoursToday(b)}</b></span></div>
+          <div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${weekHTML(b)}</div>
           <div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.100 7-11a7 7 0 0 0-14 0c0 4.900 7 11 7 11z"/><circle cx="12" cy="10" r="2.500"/></svg><span>${esc(BAR[b.barrio].name)}, Medellín</span></div>
           ${b.ig ? `<div><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.500 6.500h.01"/></svg><span>@${esc(b.ig)}</span></div>` : ''}
         </div>
@@ -541,6 +608,7 @@
     if (map) map.easeTo({ center: [b.lng, b.lat], zoom: Math.max(map.getZoom(), 15.3), duration: reduceMotion ? 0 : 800 });
     lastFocus = document.activeElement;
     ficha.innerHTML = fichaHTML(b);
+    try { history.replaceState(null, '', '#n=' + id); } catch { /* sin historial */ }
     ficha.scrollTop = 0;
     ficha.classList.add('open'); ficha.setAttribute('aria-hidden', 'false');
     if (isMobile()) sheetBg.hidden = false;
@@ -550,6 +618,7 @@
   function closeFicha() {
     if (!state.selected && !ficha.classList.contains('open')) return;
     state.selected = null;
+    if (location.hash.startsWith('#n=')) { try { history.replaceState(null, '', location.pathname + location.search); } catch { /* ignorar */ } }
     ficha.classList.remove('open'); ficha.setAttribute('aria-hidden', 'true'); sheetBg.hidden = true;
     if (map && map.getSource('sel')) map.getSource('sel').setData(selFC());
     $$('#list .card.on').forEach(c => c.classList.remove('on'));
@@ -558,6 +627,7 @@
 
   const REVIEW_BAD = /(https?:\/\/|www\.|\b[\w-]+\.(com|co|net|org|io)\b|@|\b\d{7,}\b)/i;
   ficha.addEventListener('click', e => {
+    const gal = e.target.closest('[data-gal]'); if (gal) { openLb(state.selected, +gal.dataset.gal); return; }
     const pk = e.target.closest('.pk');
     if (pk) {
       const f = pk.closest('form'), v = +pk.dataset.v; f.stars.value = v;
@@ -580,6 +650,9 @@
       const on = favs.includes(b.id);
       a.setAttribute('aria-pressed', on); a.setAttribute('aria-label', on ? 'Quitar de guardados' : 'Guardar negocio');
       toast(on ? 'Guardado en tu lista' : 'Quitado de tu lista');
+    } else if (a.dataset.act === 'share' && b) {
+      const url = location.origin + location.pathname + '#n=' + b.id;
+      copyText(url).then(() => toast('Enlace copiado. Quien lo abra verá este negocio.'), () => toast('No se pudo copiar. El enlace es: ' + url));
     } else if (a.dataset.act === 'wa') toast('Demostración: aquí se abre el WhatsApp del negocio.');
     else if (a.dataset.act === 'claim' && b) openClaim(b);
   });
@@ -598,7 +671,13 @@
     toast('Gracias por tu reseña.');
   });
   sheetBg.addEventListener('click', closeFicha);
-  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); else if (e.key === 'Escape') closeFicha(); });
+  addEventListener('keydown', e => {
+    if (!$('#lb').hidden) {
+      if (e.key === 'Escape') closeLb(); else if (e.key === 'ArrowRight') lbStep(1); else if (e.key === 'ArrowLeft') lbStep(-1);
+      return;
+    }
+    if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); else if (e.key === 'Escape') closeFicha();
+  });
 
   /* ---------- buscador del inicio (sugerencias) ---------- */
   const heroQ = $('#heroQ'), sug = $('#heroSug');
@@ -695,19 +774,50 @@
     return ok;
   }
 
+  /* fotos del negocio al reclamar la ficha (en la demostración solo se previsualizan, no se suben) */
+  let claimFiles = [];
+  const MAX_PHOTOS = 6, MAX_MB = 5;
+  function renderUploads() {
+    const g = $('#upGrid'); if (!g) return;
+    $$('img', g).forEach(i => URL.revokeObjectURL(i.src));
+    g.innerHTML = claimFiles.map((f, i) => `<figure class="up-i"><img src="${URL.createObjectURL(f)}" alt="Foto ${i + 1} elegida"><button type="button" data-rm="${i}" aria-label="Quitar la foto ${i + 1}">×</button></figure>`).join('');
+    $('#upCount').textContent = claimFiles.length ? `${claimFiles.length} de ${MAX_PHOTOS} fotos` : '';
+  }
   function openClaim(b) {
+    claimFiles = [];
     openModal(`<h3>Reclamar ${b ? '«' + esc(b.name) + '»' : 'mi ficha'}</h3>
       <p>Es gratis. Te escribiremos por WhatsApp para verificar que eres parte del negocio. Solo se publica lo que tú apruebes.</p>
       ${simpleForm('claimForm', `
         <label>Nombre del negocio<input name="biz" type="text" required value="${b ? esc(b.name) : ''}"></label>
         <label>Tu nombre<input name="name" type="text" required autocomplete="name"></label>
         <label>WhatsApp<input name="phone" type="tel" required inputmode="tel" autocomplete="tel" placeholder="300 000 0000"></label>
-        <label>¿Cuál es tu relación con el negocio?<select name="role" required><option value="">Elige una opción</option><option>Soy el dueño</option><option>Administro el negocio</option><option>Trabajo aquí y tengo autorización</option></select></label>`, 'Enviar para verificar')}`);
+        <label>¿Cuál es tu relación con el negocio?<select name="role" required><option value="">Elige una opción</option><option>Soy el dueño</option><option>Administro el negocio</option><option>Trabajo aquí y tengo autorización</option></select></label>
+        <div class="up">
+          <p class="up-t">Fotos de tu negocio <span class="opt">(opcional)</span></p>
+          <label class="up-drop"><input id="upFiles" class="sr" type="file" accept="image/*" multiple>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M7 10l5-5 5 5M5 19h14"/></svg>
+            <span><strong>Elige tus fotos</strong><small>Hasta ${MAX_PHOTOS} imágenes, máximo ${MAX_MB} MB cada una</small></span></label>
+          <div class="up-grid" id="upGrid"></div><p class="up-n" id="upCount"></p>
+          <label class="chk"><input name="photoConsent" type="checkbox"><span>Confirmo que estas fotos son mías (o tengo permiso) y autorizo mostrarlas en Descubre Medellín. Puedo pedir que las retiren cuando quiera.</span></label>
+        </div>`, 'Enviar para verificar')}`);
+    $('#upFiles').addEventListener('change', e => {
+      for (const f of [...e.target.files]) {
+        if (claimFiles.length >= MAX_PHOTOS) { toast(`Máximo ${MAX_PHOTOS} fotos.`); break; }
+        if (!/^image\//.test(f.type)) { toast('Solo se aceptan imágenes.'); continue; }
+        if (f.size > MAX_MB * 1048576) { toast(`«${f.name}» pesa más de ${MAX_MB} MB.`); continue; }
+        claimFiles.push(f);
+      }
+      e.target.value = ''; renderUploads();
+    });
+    $('#upGrid').addEventListener('click', e => { const r = e.target.closest('[data-rm]'); if (r) { claimFiles.splice(+r.dataset.rm, 1); renderUploads(); } });
     $('#claimForm').addEventListener('submit', e => {
       e.preventDefault(); const f = e.target, err = $('.err', f);
       if (!validate(f)) { err.textContent = 'Revisa los campos marcados.'; err.hidden = false; return; }
-      saveLead('reclamo', { biz: f.biz.value.trim(), name: f.name.value.trim(), phone: cleanPhone(f.phone.value), role: f.role.value, ref: b ? b.id : null });
-      $('#mBody').innerHTML = `<h3>Recibimos tu solicitud</h3><p class="ok">Gracias. Te escribiremos por WhatsApp para verificar tu negocio.</p><p>Modo demostración: la solicitud quedó guardada solo en este navegador.</p><button class="btn btn-ghost" type="button" data-close>Cerrar</button>`;
+      if (claimFiles.length && !f.photoConsent.checked) { err.textContent = 'Confirma que las fotos son tuyas para poder enviarlas.'; err.hidden = false; return; }
+      const n = claimFiles.length;
+      saveLead('reclamo', { biz: f.biz.value.trim(), name: f.name.value.trim(), phone: cleanPhone(f.phone.value), role: f.role.value, ref: b ? b.id : null, photos: n });
+      $$('#upGrid img').forEach(i => URL.revokeObjectURL(i.src)); claimFiles = [];
+      $('#mBody').innerHTML = `<h3>Recibimos tu solicitud</h3><p class="ok">Gracias. Te escribiremos por WhatsApp para verificar tu negocio${n ? ' y revisar tus fotos' : ''}.</p><p>Modo demostración: la solicitud quedó guardada solo en este navegador${n ? ' y las fotos no se suben' : ''}.</p><button class="btn btn-ghost" type="button" data-close>Cerrar</button>`;
     });
   }
   function openOptout() {
@@ -949,4 +1059,6 @@
   refresh();
   reveal();
   initMap();
+  const dl = /[#&]n=(\w+)/.exec(location.hash);
+  if (dl && BIZ[dl[1]]) setTimeout(() => { goExplorer(); select(dl[1], { from: 'list' }); }, 1200);
 })();
