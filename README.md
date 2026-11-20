@@ -17,7 +17,7 @@ y abre http://localhost:8861 (necesita internet: carga MapLibre desde unpkg y el
 
 ## Trabajos reales de SONETIX
 
-La sección «Trabajos reales» muestra capturas de tres sitios publicados (El Coctelazo, Coctelazo & Perritos Gourmet y Gro’smania) con lo que cada uno hace, solo con hechos que se ven en el propio sitio, sin cifras inventadas. Los datos están en el arreglo `CASES` de `js/app.js`; para ocultar uno (por ejemplo si un cliente no autoriza mostrarlo) pon `show: false`. Las capturas están en `img/casos/`. Los nombres, logos e imágenes pertenecen a cada negocio.
+La sección «Trabajos reales» muestra capturas de tres sitios (El Coctelazo, Coctelazo & Perritos Gourmet y Vibrans Gourmet) con lo que cada uno hace, solo con hechos que se ven en el propio sitio, sin cifras inventadas. Vibrans todavía no tiene dirección pública: su tarjeta no lleva enlace (cuando se publique, pon su dirección en `url` dentro de `CASES`). Los datos están en el arreglo `CASES` de `js/app.js`; para ocultar uno (por ejemplo si un cliente no autoriza mostrarlo) pon `show: false`. Las capturas están en `img/casos/`. Los nombres, logos e imágenes pertenecen a cada negocio.
 
 ## Ficha del negocio
 

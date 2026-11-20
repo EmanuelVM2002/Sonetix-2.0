@@ -741,27 +741,28 @@
       lead: 'Una carta que se abre al escanear el QR de la mesa: el cliente elige cómo quiere pedir y el pedido llega directo a la barra.',
       facts: ['Pedido en la mesa con QR, o a domicilio por WhatsApp, o solo ver la carta', 'Carrito «Mi pedido» y botón para llamar al mesero', 'Horarios de domicilios y de cocina siempre visibles', 'Español e inglés'],
       tags: ['Carta con QR por mesa', 'Pedidos', 'Domicilios'] },
-    { show: true, name: 'Gro’smania Heladería', kind: 'Heladería', url: 'https://grosmania.emanuelvillada10.workers.dev', shot: 'img/casos/grosmania.jpg', device: 'desktop', accent: '#0d9a86',
-      lead: 'Una carta de copas, waffles y fresas con crema pensada para que cualquier persona pueda pedir sin enredos.',
-      facts: ['Pedido por WhatsApp eligiendo los sabores de helado', 'Club de puntos para clientes frecuentes', 'Opiniones de clientes y carta por categorías', 'Panel para que el negocio edite su propia carta, sabores y ajustes'],
-      tags: ['Pedidos por WhatsApp', 'Club de puntos', 'Panel de administración'] }
+    { show: true, name: 'Vibrans Gourmet', kind: 'Pasabocas gourmet y catering para eventos', url: '', shot: 'img/casos/vibrans.jpg', device: 'desktop', accent: '#c6a15b',
+      lead: 'Un catálogo para pedir pasabocas y una forma de cotizar eventos, con alquiler de torres y bandejas, todo conectado al WhatsApp del negocio.',
+      facts: ['Catálogo con precios y pedido mínimo: el cliente arma su pedido y ve el total estimado', 'Simulador de mesa para ver cuántas piezas caben y cotizar esa configuración', 'Formulario de cotización de eventos que deja listo el mensaje para WhatsApp', 'Identidad borgoña y dorado con animaciones suaves'],
+      tags: ['Catálogo y pedidos', 'Simulador de mesa', 'Cotización por WhatsApp'] }
   ];
   const EXT = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg>';
   function caseHTML(c, i) {
-    const host = new URL(c.url).host;
+    const link = !!c.url, host = link ? new URL(c.url).host : 'Vista previa del sitio';
+    const frame = `<span class="c2-frame ${c.device}"><span class="c2-bar"><i></i><i></i><i></i><em>${esc(host)}</em></span>
+          <img src="${esc(c.shot)}" alt="Captura del sitio de ${esc(c.name)}" loading="lazy"></span>`;
+    const shot = link
+      ? `<a class="c2-shot" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir el sitio de ${esc(c.name)} en una pestaña nueva">${frame}<span class="c2-hint">Visitar ${EXT}</span></a>`
+      : `<div class="c2-shot">${frame}</div>`;
     return `<article class="case2${i % 2 ? ' flip' : ''}" style="--ca:${c.accent}">
-      <a class="c2-shot" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir el sitio de ${esc(c.name)} en una pestaña nueva">
-        <span class="c2-frame ${c.device}"><span class="c2-bar"><i></i><i></i><i></i><em>${esc(host)}</em></span>
-          <img src="${esc(c.shot)}" alt="Captura del sitio publicado de ${esc(c.name)}" loading="lazy"></span>
-        <span class="c2-hint">Visitar ${EXT}</span>
-      </a>
+      ${shot}
       <div class="c2-body">
         <span class="c2-kind">${esc(c.kind)}</span>
         <h4>${esc(c.name)}</h4>
         <p class="c2-lead">${esc(c.lead)}</p>
         <ul class="c2-facts">${c.facts.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
         <div class="tags">${c.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
-        <a class="btn btn-ghost" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Ver el sitio ${EXT}</a>
+        ${link ? `<a class="btn btn-ghost" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">Ver el sitio ${EXT}</a>` : ''}
       </div></article>`;
   }
   $('#svcGrid').innerHTML = SERVICES.map(([d, t, p]) => `<div>${rawIco(d)}<strong>${t}</strong><p>${p}</p></div>`).join('');
