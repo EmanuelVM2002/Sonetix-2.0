@@ -14,4 +14,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(data);
   });
-}).listen(port, () => console.log('Parchea en http://localhost:' + port));
+}).listen(port, () => console.log('Sonetix GO en http://localhost:' + port));

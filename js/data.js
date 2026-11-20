@@ -77,7 +77,7 @@ const CZ_PHOTOS = [
 const CZ_COMMON = {
   real: true, brand: "El Coctelazo", logo: CZ_IMG + "logo-el-coctelazo.webp", cat: "bar", price: 1,
   claimed: true, web: "https://elcoctelazo.com", webBy: "sonetix", ig: null,
-  wa: "573046609548", waText: "Hola, vi El Coctelazo en Parchea y quiero hacer un pedido.",
+  wa: "573046609548", waText: "Hola, vi El Coctelazo en Sonetix GO y quiero hacer un pedido.",
   desc: "Granizados, micheladas, bombas, litrones, nevecones, adiciones, cervezas y licores. En Medellín desde 2017.",
   hours: CZ_HOURS, hoursNote: "Horario general del sitio oficial; viernes y sábado cierran a las 2:00 a. m.",
   notice: ADULT, menu: CZ_MENU, photos: CZ_PHOTOS
@@ -130,7 +130,7 @@ window.BUSINESSES = [
     logo: PZ_IMG + "logo-by-perritos.webp", cat: "bar", barrio: "provenza", price: 2,
     address: "Carrera 35 #8A-11, El Poblado", lat: 6.20757, lng: -75.56626,
     claimed: true, web: "https://elcoctelazoprovenza.emanuelvillada10.workers.dev", webBy: "sonetix", ig: null,
-    wa: "573020370950", waText: "Hola, vi Coctelazo & Perritos Gourmet en Parchea y quiero hacer un pedido.",
+    wa: "573020370950", waText: "Hola, vi Coctelazo & Perritos Gourmet en Sonetix GO y quiero hacer un pedido.",
     desc: "Granizados, cócteles, chupitos, malteadas, licores, cervezas, micheladas y comida gourmet. Pide desde tu mesa o a domicilio.",
     services: ["Pedido desde la mesa", "Domicilios desde las 5:00 p. m.", "Cócteles", "Comida gourmet"],
     hours: { byDay: { 0: [18, 25], 2: [17, 24], 3: [17, 24], 4: [17, 25], 5: [18, 26], 6: [18, 26] } },

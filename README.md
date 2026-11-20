@@ -1,4 +1,4 @@
-# Parchea · by SONETIX (prototipo de interfaz)
+# Sonetix GO · by SONETIX (prototipo de interfaz)
 
 Nombre **provisional**. Prototipo estático (HTML + CSS + JS) del diseño de la plataforma: inicio, mapa interactivo, fichas, barrios, sección comercial de SONETIX y formulario de cotización.
 

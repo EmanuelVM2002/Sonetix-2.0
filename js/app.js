@@ -1,4 +1,4 @@
-/* Parchea · by SONETIX — prototipo de interfaz (sin servidor).
+/* Sonetix GO · by SONETIX — prototipo de interfaz (sin servidor).
    Los datos vienen de js/data.js. Las solicitudes se guardan solo en este navegador (localStorage). */
 (() => {
   'use strict';
@@ -1239,7 +1239,7 @@
     } catch { heroMap = null; }
   }
 
-  /* ---------- vista previa viva de Parchea en la portada (mapa interactivo grande) ---------- */
+  /* ---------- vista previa viva de Sonetix GO en la portada (mapa interactivo grande) ---------- */
   let liveMap = null, liveWatch = false;
   function addLiveLayers() {
     const c = pal(), RED = '#ff0a1e', dark = theme === 'dark';
@@ -1317,7 +1317,7 @@
     const h = location.hash, mm = /^#\/mapa(?:\/(\w+))?/.exec(h) || /^#n=(\w+)/.exec(h);
     const wantMap = !!mm;
     document.body.classList.toggle('view-map', wantMap);
-    document.title = wantMap ? 'Parchea · el mapa de Medallo | SONETIX' : 'SONETIX · Páginas web a la medida';
+    document.title = wantMap ? 'Sonetix GO · Tu ciudad a un clic | SONETIX' : 'SONETIX · Páginas web a la medida';
     $$('.menu a').forEach(a => a.classList.toggle('on', wantMap && a.dataset.route === 'mapa'));
     menu.classList.remove('open'); burger.setAttribute('aria-expanded', 'false');
     if (wantMap) {
