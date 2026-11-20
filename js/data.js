@@ -1,13 +1,20 @@
 /* ============================================================
-   DATOS DE DEMOSTRACIÓN — todo lo de este archivo es de ejemplo.
-   Los negocios, descripciones y ubicaciones NO son reales.
-   Las coordenadas son aproximadas, solo para mostrar el mapa.
+   DATOS DE PARCHEA
+
+   · Negocios REALES (marcados `real: true`): El Coctelazo (6 sedes) y
+     Coctelazo & Perritos Gourmet (Provenza). La información sale de sus
+     sitios oficiales, creados por SONETIX: direcciones, horarios, WhatsApp
+     y carta. Las coordenadas son aproximadas (precisión de barrio): el
+     botón «Cómo llegar» abre Google Maps con ese punto.
+   · Negocios de EJEMPLO (marcados `example: true`): solo 5, para mostrar
+     cómo se ve una ficha sin reclamar, con y sin sitio, y con eventos.
+     No existen en la realidad.
    Cuando exista la base real (Supabase), este archivo se reemplaza.
    ============================================================ */
 
 // Número de WhatsApp de SONETIX en formato internacional sin "+" (ej: "573001234567").
 // Si queda vacío, el formulario guarda la solicitud en el navegador y muestra un aviso.
-window.SONETIX_WHATSAPP = "";
+window.SONETIX_WHATSAPP = "573017759082";
 
 window.CATEGORIES = [
   { id: "rest",    label: "Restaurantes",    icon: "M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10" },
@@ -21,96 +28,134 @@ window.CATEGORIES = [
 ];
 
 window.BARRIOS = [
-  { id: "poblado",  name: "El Poblado",        lat: 6.2086, lng: -75.5659, zoom: 14.6, vibe: "Vida nocturna, gastronomía y turismo" },
-  { id: "provenza", name: "Provenza",          lat: 6.2110, lng: -75.5695, zoom: 15.2, vibe: "Calles arboladas, bares y cafés de autor" },
-  { id: "laureles", name: "Laureles",          lat: 6.2447, lng: -75.5910, zoom: 14.8, vibe: "Barrio de vecinos, parques y restaurantes" },
-  { id: "estadio",  name: "Estadio · La 70",   lat: 6.2565, lng: -75.5895, zoom: 14.8, vibe: "Rumba, deporte y planes de fin de semana" },
-  { id: "centro",   name: "Centro",            lat: 6.2517, lng: -75.5636, zoom: 15.0, vibe: "Historia, comercio y cultura" },
-  { id: "belen",    name: "Belén",             lat: 6.2330, lng: -75.6040, zoom: 14.8, vibe: "Comercio de barrio y emprendimientos" },
-  { id: "pajarito", name: "Robledo · Pajarito",lat: 6.2995, lng: -75.6270, zoom: 14.6, vibe: "Terrazas con vista y cocina local" }
+  { id: "sanjavier", name: "San Javier",        lat: 6.2522, lng: -75.6218, zoom: 14.8, vibe: "Occidente de Medellín" },
+  { id: "manrique",  name: "Manrique · Campo Valdés", lat: 6.2748, lng: -75.5559, zoom: 14.9, vibe: "Nororiente de Medellín" },
+  { id: "castilla",  name: "Castilla",          lat: 6.2960, lng: -75.5690, zoom: 14.9, vibe: "Noroccidente de Medellín" },
+  { id: "belen",     name: "Belén",             lat: 6.2160, lng: -75.6041, zoom: 14.4, vibe: "Comercio de barrio y emprendimientos" },
+  { id: "provenza",  name: "Provenza",          lat: 6.2093, lng: -75.5679, zoom: 15.2, vibe: "Calles arboladas, bares y cafés de autor" },
+  { id: "laureles",  name: "Laureles",          lat: 6.2447, lng: -75.5910, zoom: 14.8, vibe: "Barrio de vecinos, parques y restaurantes" },
+  { id: "centro",    name: "Centro",            lat: 6.2517, lng: -75.5636, zoom: 15.0, vibe: "Historia, comercio y cultura" }
 ];
 
-/* Horarios por defecto según categoría. days: 0=domingo … 6=sábado. close > 24 = pasada la medianoche. */
+/* Horarios por defecto de los negocios de ejemplo. days: 0=domingo … 6=sábado. close > 24 = pasada la medianoche. */
 const H = {
-  rest:    { days: [0,1,2,3,4,5,6], open: 11, close: 22 },
   cafe:    { days: [0,1,2,3,4,5,6], open: 7,  close: 19 },
-  bar:     { days: [2,3,4,5,6,0],   open: 17, close: 26 },
-  moda:    { days: [1,2,3,4,5,6],   open: 10, close: 20 },
   belleza: { days: [1,2,3,4,5,6],   open: 9,  close: 19 },
   libros:  { days: [1,2,3,4,5,6],   open: 10, close: 19 },
-  ocio:    { days: [4,5,6,0],       open: 14, close: 25 },
-  emprend: { days: [1,2,3,4,5],     open: 9,  close: 18 }
+  moda:    { days: [1,2,3,4,5,6],   open: 10, close: 20 },
+  ocio:    { days: [4,5,6,0],       open: 14, close: 25 }
 };
 
-const centers = Object.fromEntries(window.BARRIOS.map(b => [b.id, b]));
-let _id = 0;
-function b(name, cat, barrio, dLat, dLng, o = {}) {
-  const c = centers[barrio];
-  return Object.assign({
-    id: "n" + (++_id), name, cat, barrio,
-    lat: +(c.lat + dLat * 0.001).toFixed(5),
-    lng: +(c.lng + dLng * 0.001).toFixed(5),
-    desc: "", services: [], price: 2,
-    hours: H[cat], claimed: true, web: null, webBy: null, ig: null
-  }, o);
-}
+/* Horario por día: { día: [abre, cierra] }. Los días que no aparecen, cerrado. */
+const ADULT = "Venta de licor solo a mayores de 18 años. Disfruta con responsabilidad.";
+
+/* ---------------- NEGOCIOS REALES ---------------- */
+const CZ_IMG = "img/negocios/coctelazo/";
+const CZ_HOURS = { byDay: { 0: [14.5, 24], 1: [14.5, 24], 2: [14.5, 24], 3: [14.5, 24], 4: [14.5, 24], 5: [14.5, 26], 6: [14.5, 26] } };
+const CZ_MENU = {
+  note: "Precios de referencia tomados del sitio oficial; confirma en la sede.",
+  url: "https://elcoctelazo.com",
+  items: [
+    { name: "Granizado 16 oz",        price: 12500, from: true, detail: "Sin licor desde $12.500 · envenenado $17.500", img: CZ_IMG + "fam16.webp" },
+    { name: "Granizado 1 litro",      price: 27500,             detail: "Para compartir",                              img: CZ_IMG + "gran1l.webp" },
+    { name: "Cremoso tradicional 16 oz", price: 19000,          detail: "Granizado cremoso",                           img: CZ_IMG + "cr16.webp" },
+    { name: "Litrón cremoso",         price: 42000,             detail: "Litro de granizado cremoso",                  img: CZ_IMG + "crlt.webp" },
+    { name: "Granizado de Oreo 22 oz", price: 18000,            detail: "Sabor Oreo",                                  img: CZ_IMG + "g22oreo.webp" },
+    { name: "Granizado chamoy y tajín", price: 19800,           detail: "Picante y ácido",                             img: CZ_IMG + "chamoy.webp" }
+  ]
+};
+const CZ_PHOTOS = [
+  { src: CZ_IMG + "fam16.webp",           alt: "Granizado de 16 oz de El Coctelazo",   cap: "Granizado 16 oz" },
+  { src: CZ_IMG + "gran1l.webp",          alt: "Granizado de 1 litro",                 cap: "Granizado 1 litro" },
+  { src: CZ_IMG + "cr16.webp",            alt: "Cremoso tradicional",                  cap: "Cremoso tradicional" },
+  { src: CZ_IMG + "crlt.webp",            alt: "Litrón cremoso",                       cap: "Litrón cremoso" },
+  { src: CZ_IMG + "g22oreo.webp",         alt: "Granizado de Oreo",                    cap: "Granizado de Oreo" },
+  { src: CZ_IMG + "chamoy.webp",          alt: "Granizado de chamoy y tajín",          cap: "Chamoy y tajín" },
+  { src: CZ_IMG + "bestia-blanca.webp",   alt: "Bestia blanca de El Coctelazo",        cap: "Bestia blanca" },
+  { src: CZ_IMG + "bomba-smirnoff.webp",  alt: "Bomba Smirnoff de El Coctelazo",       cap: "Bomba Smirnoff" }
+];
+const CZ_COMMON = {
+  real: true, brand: "El Coctelazo", logo: CZ_IMG + "logo-el-coctelazo.webp", cat: "bar", price: 1,
+  claimed: true, web: "https://elcoctelazo.com", webBy: "sonetix", ig: null,
+  wa: "573046609548", waText: "Hola, vi El Coctelazo en Parchea y quiero hacer un pedido.",
+  desc: "Granizados, micheladas, bombas, litrones, nevecones, adiciones, cervezas y licores. En Medellín desde 2017.",
+  hours: CZ_HOURS, hoursNote: "Horario general del sitio oficial; viernes y sábado cierran a las 2:00 a. m.",
+  notice: ADULT, menu: CZ_MENU, photos: CZ_PHOTOS
+};
+const cz = (id, sede, barrio, address, lat, lng, extra = {}) => Object.assign({}, CZ_COMMON, {
+  id, name: "El Coctelazo · " + sede, sede, barrio, address, lat, lng,
+  services: ["Granizados", "Micheladas", "Litrones", "Licores y cervezas"].concat(extra.services || [])
+}, extra, { services: ["Granizados", "Micheladas", "Litrones", "Licores y cervezas"].concat(extra.services || []) });
+
+const PZ_IMG = "img/negocios/provenza/";
+const PZ_MENU = {
+  note: "Precios de referencia tomados del sitio oficial; confirma en el local.",
+  url: "https://elcoctelazoprovenza.emanuelvillada10.workers.dev",
+  items: [
+    { name: "Margarita spicy tamarindo", price: 29000,                 detail: "Cóctel",                              img: PZ_IMG + "margarita-spicy-tamarindo.webp" },
+    { name: "Blue Island",               price: 35000,                 detail: "Cóctel",                              img: PZ_IMG + "blue-island.webp" },
+    { name: "Las Gemelas del Perreo",    price: 35900,                 detail: "Para compartir",                      img: PZ_IMG + "gemelas-del-perreo.webp" },
+    { name: "Cantarito",                 price: 149000,                detail: "Incluye media botella de tequila",    img: PZ_IMG + "cantarito.webp" },
+    { name: "Perritos",                  price: 11000, from: true,     detail: "Elige 1 proteína",                    img: PZ_IMG + "perritos.webp" },
+    { name: "Baos x2",                   price: 27000,                 detail: "Chicharrón crocante",                 img: PZ_IMG + "baos.webp" },
+    { name: "Hamburguesas",              price: 13000,                 detail: "Comida gourmet",                      img: PZ_IMG + "hamburguesas.webp" },
+    { name: "Combo Ceviche",             price: 79000,                 detail: "Ceviche Fukuoka",                     img: PZ_IMG + "ceviche-fukuoka.webp" }
+  ]
+};
+const PZ_PHOTOS = [
+  { src: PZ_IMG + "margarita-spicy-tamarindo.webp", alt: "Margarita spicy tamarindo",     cap: "Margarita spicy tamarindo" },
+  { src: PZ_IMG + "perritos.webp",                  alt: "Perritos gourmet",              cap: "Perritos gourmet" },
+  { src: PZ_IMG + "blue-island.webp",               alt: "Cóctel Blue Island",            cap: "Blue Island" },
+  { src: PZ_IMG + "baos.webp",                      alt: "Baos de chicharrón",            cap: "Baos" },
+  { src: PZ_IMG + "hamburguesas.webp",              alt: "Hamburguesas",                  cap: "Hamburguesas" },
+  { src: PZ_IMG + "ceviche-fukuoka.webp",           alt: "Ceviche Fukuoka",               cap: "Ceviche Fukuoka" },
+  { src: PZ_IMG + "cantarito.webp",                 alt: "Cantarito",                     cap: "Cantarito" },
+  { src: PZ_IMG + "malteada-oreo.webp",             alt: "Malteada de Oreo",              cap: "Malteada de Oreo" }
+];
 
 window.BUSINESSES = [
-  /* El Poblado */
-  b("Casa Ceiba", "rest", "poblado", 1.2, -1.4, { price: 3, web: "https://example.com", desc: "Cocina colombiana de autor con ingredientes de la región. Terraza interior y carta de vinos.", services: ["Reservas", "Terraza", "Domicilios"], ig: "casaceiba" }),
-  b("Tostadora Norte", "cafe", "poblado", -1.1, 1.3, { price: 2, desc: "Café de origen tostado en el local. Barra de filtrados y repostería diaria.", services: ["Café de especialidad", "Para llevar", "Wi-Fi"], ig: "tostadoranorte" }),
-  b("Bar Mirador 12", "bar", "poblado", 0.4, 1.8, { price: 3, web: "https://example.com", webBy: "sonetix", desc: "Coctelería de autor con vista a la ciudad. Música en vivo los jueves.", services: ["Coctelería", "Música en vivo", "Reservas por WhatsApp"], ig: "barmirador12" }),
-  b("Atelier Lomas", "moda", "poblado", -0.5, -2.0, { price: 3, claimed: false, desc: "Boutique de diseño colombiano." }),
-  b("Studio Pelo & Co", "belleza", "poblado", 2.0, 0.6, { price: 2, claimed: false, desc: "Peluquería y barbería." }),
+  /* ---- El Coctelazo: una ficha por sede (las coordenadas son aproximadas) ---- */
+  cz("c1", "San Javier",    "sanjavier", "Calle 39B #108-76",           6.25224, -75.62180),
+  cz("c2", "Manrique",      "manrique",  "Carrera 47 #69-5, Aranjuez",  6.27190, -75.55610),
+  cz("c3", "Belén La Nubia","belen",     "Carrera 83 #15A-21",          6.22180, -75.60480, {
+    services: ["Domicilios"], delivery: "Domicilios de 4:30 p. m. a 12:30 a. m. desde esta sede. Pedido mínimo $20.000."
+  }),
+  cz("c4", "Castilla",      "castilla",  "Carrera 68 #93-83",           6.29600, -75.56900),
+  cz("c5", "Belén Rincón",  "belen",     "Carrera 79 #1A-44",           6.21020, -75.60350, { services: ["Punto de venta"] }),
+  cz("c6", "Campo Valdés",  "manrique",  "Carrera 48A #76-59",          6.27760, -75.55570),
 
-  /* Provenza */
-  b("Fogón de Provenza", "rest", "provenza", 0.6, 0.8, { price: 2, web: "https://example.com", webBy: "sonetix", desc: "Carta con QR por mesa y pedido directo al mesero. Platos para compartir.", services: ["Carta con QR", "Llamar al mesero", "Terraza"], ig: "fogonprovenza" }),
-  b("Verde Menta", "cafe", "provenza", -0.8, -0.7, { price: 2, desc: "Cafetería con opciones vegetarianas y brunch todo el día.", services: ["Brunch", "Vegetariano", "Pet friendly"], ig: "verdementa" }),
-  b("La Esquina Roja", "bar", "provenza", 1.0, -1.6, { price: 2, desc: "Cervezas artesanales y tapas. Plan de after office entre semana.", services: ["Cerveza artesanal", "Tapas", "Eventos"], ig: "laesquinaroja" }),
-  b("Libros del Sur", "libros", "provenza", -1.4, 1.1, { price: 2, web: "https://example.com", desc: "Librería independiente con café y club de lectura mensual.", services: ["Club de lectura", "Pedidos especiales", "Café"], ig: "librosdelsur" }),
-  b("Taller Cuero", "emprend", "provenza", 0.2, 2.1, { price: 3, claimed: false, desc: "Marroquinería artesanal." }),
+  /* ---- Coctelazo & Perritos Gourmet · Provenza ---- */
+  {
+    id: "p1", real: true, brand: "Coctelazo & Perritos Gourmet", name: "Coctelazo & Perritos Gourmet", sede: "Provenza",
+    logo: PZ_IMG + "logo-by-perritos.webp", cat: "bar", barrio: "provenza", price: 2,
+    address: "Carrera 35 #8A-11, El Poblado", lat: 6.20757, lng: -75.56626,
+    claimed: true, web: "https://elcoctelazoprovenza.emanuelvillada10.workers.dev", webBy: "sonetix", ig: null,
+    wa: "573020370950", waText: "Hola, vi Coctelazo & Perritos Gourmet en Parchea y quiero hacer un pedido.",
+    desc: "Granizados, cócteles, chupitos, malteadas, licores, cervezas, micheladas y comida gourmet. Pide desde tu mesa o a domicilio.",
+    services: ["Pedido desde la mesa", "Domicilios desde las 5:00 p. m.", "Cócteles", "Comida gourmet"],
+    hours: { byDay: { 0: [18, 25], 2: [17, 24], 3: [17, 24], 4: [17, 25], 5: [18, 26], 6: [18, 26] } },
+    hoursNote: "Lunes cerrado. Viernes y sábado cierran a las 2:00 a. m.",
+    notice: ADULT, menu: PZ_MENU, photos: PZ_PHOTOS
+  },
 
-  /* Laureles */
-  b("Parrilla Dos Ríos", "rest", "laureles", 0.9, -0.9, { price: 2, desc: "Cortes a la parrilla y platos tradicionales. Almuerzo ejecutivo de lunes a viernes.", services: ["Almuerzo ejecutivo", "Domicilios", "Eventos"], ig: "parrilladosrios" }),
-  b("Café Primer Parque", "cafe", "laureles", -0.4, 0.6, { price: 1, desc: "Café de barrio con mesas en la acera y postres caseros.", services: ["Para llevar", "Mesas al aire libre", "Postres"] }),
-  b("Heladería Aurora", "cafe", "laureles", 1.6, 1.5, { price: 1, web: "https://example.com", webBy: "sonetix", desc: "Helados artesanales con sabores colombianos. Pedido por WhatsApp.", services: ["Helados artesanales", "Pedido por WhatsApp", "Pet friendly"], ig: "heladeriaaurora" }),
-  b("Ropa Vieja Vintage", "moda", "laureles", -1.3, -1.5, { price: 2, desc: "Ropa de segunda mano seleccionada y accesorios vintage.", services: ["Vintage", "Accesorios", "Ajustes"], ig: "ropaviejavintage" }),
-  b("Salón Calma", "belleza", "laureles", 0.2, 2.2, { price: 2, claimed: false, desc: "Manicure, pedicure y cuidado facial." }),
-  b("Pulso Libre", "ocio", "laureles", -2.0, 0.2, { price: 2, desc: "Escape room y juegos de mesa para grupos.", services: ["Escape room", "Juegos de mesa", "Cumpleaños"], ig: "pulsolibre" }),
-
-  /* Estadio · La 70 */
-  b("Tapas de la 70", "bar", "estadio", 0.7, 0.4, { price: 2, desc: "Bar de barrio con tapas y fútbol en pantalla gigante.", services: ["Partidos en vivo", "Tapas", "Reservas por WhatsApp"], ig: "tapasdela70" }),
-  b("Ají & Leña", "rest", "estadio", -0.9, -1.0, { price: 2, web: "https://example.com", desc: "Comida criolla a la leña. Menú del día y platos para grupos.", services: ["Menú del día", "Domicilios", "Grupos"], ig: "ajiylena" }),
-  b("Escena Cero", "ocio", "estadio", 1.5, -1.7, { price: 2, desc: "Teatro independiente y noches de comedia.", services: ["Teatro", "Comedia", "Boletería en línea"], ig: "escenacero" }),
-  b("Moda Rápida 70", "moda", "estadio", -0.2, 1.9, { price: 1, claimed: false, desc: "Tienda de ropa casual." }),
-  b("Café Tribuna", "cafe", "estadio", -1.6, 0.5, { price: 1, claimed: false, desc: "Cafetería y panadería." }),
-
-  /* Centro */
-  b("Fonda Plaza Mayor", "rest", "centro", 0.4, -0.6, { price: 1, desc: "Bandeja paisa y sancocho en un edificio con historia. Muy visitado a la hora del almuerzo.", services: ["Almuerzo", "Comida típica", "Grupos"] }),
-  b("Libros de Mano", "libros", "centro", -0.7, 0.9, { price: 1, desc: "Librería de usados y ediciones agotadas.", services: ["Libros usados", "Compra y cambio"], ig: "librosdemano" }),
-  b("Taller Textil Centro", "emprend", "centro", 1.2, 1.6, { price: 2, claimed: false, desc: "Confección y arreglos por encargo." }),
-  b("Café Esquina Antigua", "cafe", "centro", -1.5, -1.2, { price: 1, desc: "Tinto, empanadas y pandebono desde temprano.", services: ["Para llevar", "Desayunos"] }),
-  b("Galería Paso a Paso", "ocio", "centro", 0.0, 2.2, { price: 1, web: "https://example.com", desc: "Arte contemporáneo y talleres abiertos al público.", services: ["Exposiciones", "Talleres", "Entrada libre"], ig: "galeriapasoapaso" }),
-
-  /* Belén */
-  b("Panadería La Veintinueve", "cafe", "belen", 0.6, 0.9, { price: 1, desc: "Pan recién horneado y desayunos completos.", services: ["Panadería", "Desayunos", "Domicilios"] }),
-  b("Sabor de Mi Tierra", "rest", "belen", -0.8, -1.1, { price: 1, claimed: false, desc: "Comida casera." }),
-  b("Boutique Valentina", "moda", "belen", 1.5, -0.4, { price: 2, desc: "Ropa femenina para toda ocasión y tallas amplias.", services: ["Tallas amplias", "Ajustes", "Pedido por WhatsApp"], ig: "boutiquevalentina" }),
-  b("Dulces Raíces", "emprend", "belen", -1.3, 1.5, { price: 1, desc: "Dulces artesanales y detalles personalizados para eventos.", services: ["Detalles corporativos", "Pedidos por encargo", "Domicilios"], ig: "dulcesraices" }),
-  b("Barbería El Filo", "belleza", "belen", 0.1, -2.1, { price: 1, claimed: false, desc: "Cortes y barba." }),
-
-  /* Robledo · Pajarito */
-  b("Mirador del Cerro", "rest", "pajarito", 0.8, 1.0, { price: 2, desc: "Parrilla y celebraciones con vista panorámica. Cotiza tu evento por WhatsApp.", services: ["Celebraciones", "Terraza con vista", "Parrilla"], ig: "miradordelcerro" }),
-  b("Helados del Alto", "cafe", "pajarito", -0.9, -0.8, { price: 1, claimed: false, desc: "Heladería y waffles." }),
-  b("Burgers de la Loma", "rest", "pajarito", 1.7, -1.2, { price: 1, desc: "Hamburguesas artesanales con domicilio los fines de semana.", services: ["Domicilios", "Hamburguesas", "Combos"], ig: "burgersdelaloma" }),
-  b("Café Conuco", "cafe", "pajarito", -0.2, 2.0, { price: 1, desc: "Dos sedes en la ciudad. Brunch, waffles y talleres de repostería.", services: ["Brunch", "Talleres", "Pet friendly"], ig: "cafeconuco" }),
-  b("Vive Verde Vivero", "emprend", "pajarito", -1.8, 0.6, { price: 1, claimed: false, desc: "Plantas y accesorios de jardinería." })
+  /* ---- Solo 5 negocios de ejemplo (ficticios) ---- */
+  { id: "n9",  example: true, name: "Libros del Sur", cat: "libros", barrio: "provenza", lat: 6.21050, lng: -75.57110, price: 2, hours: H.libros, claimed: true, web: "https://example.com", webBy: null, ig: "librosdelsur",
+    desc: "Librería independiente con café y club de lectura mensual.", services: ["Club de lectura", "Pedidos especiales", "Café"] },
+  { id: "n12", example: true, name: "Café Primer Parque", cat: "cafe", barrio: "laureles", lat: 6.24430, lng: -75.59040, price: 1, hours: H.cafe, claimed: true, web: null, webBy: null, ig: null,
+    desc: "Café de barrio con mesas en la acera y postres caseros.", services: ["Para llevar", "Mesas al aire libre", "Postres"] },
+  { id: "n15", example: true, name: "Salón Calma", cat: "belleza", barrio: "laureles", lat: 6.24490, lng: -75.58880, price: 2, hours: H.belleza, claimed: false, web: null, webBy: null, ig: null,
+    desc: "Manicure, pedicure y cuidado facial.", services: [] },
+  { id: "n29", example: true, name: "Boutique Valentina", cat: "moda", barrio: "belen", lat: 6.21520, lng: -75.60250, price: 2, hours: H.moda, claimed: true, web: null, webBy: null, ig: "boutiquevalentina",
+    desc: "Ropa femenina para toda ocasión y tallas amplias.", services: ["Tallas amplias", "Ajustes", "Pedido por WhatsApp"] },
+  { id: "n26", example: true, name: "Galería Paso a Paso", cat: "ocio", barrio: "centro", lat: 6.25170, lng: -75.56140, price: 1, hours: H.ocio, claimed: true, web: "https://example.com", webBy: null, ig: "galeriapasoapaso",
+    desc: "Arte contemporáneo y talleres abiertos al público.", services: ["Exposiciones", "Talleres", "Entrada libre"] }
 ];
 
 
 /* ============================================================
    EVENTOS DE EJEMPLO — d = días a partir de hoy (siempre próximos).
-   Los negocios y eventos son ficticios.
+   Solo para los negocios de ejemplo. Los negocios reales no tienen
+   eventos hasta que ellos mismos los publiquen.
    ============================================================ */
 window.EVENT_TYPES = [
   { id: "musica",  label: "Música" },
@@ -122,36 +167,17 @@ window.EVENT_TYPES = [
 ];
 
 window.EVENTS = [
-  { id: "e1",  biz: "n13", d: 0, time: "15:00", type: "promo",   price: "2x1 en copas",          title: "Tarde de helados: 2x1 en copas", desc: "Todas las copas de la casa en 2x1 hasta agotar existencias. Pedido por WhatsApp o en el local." },
-  { id: "e2",  biz: "n3",  d: 1, time: "19:00", type: "musica",  price: "Cover $20.000",         title: "Noche de coctelería y música en vivo", desc: "Banda en vivo desde las 9:00 p. m. y carta especial de coctelería de autor. Reserva tu mesa por WhatsApp." },
-  { id: "e3",  biz: "n7",  d: 1, time: "11:00", type: "gastro",  price: "Menú especial",         title: "Brunch con menú especial", desc: "Menú de brunch con opciones vegetarianas, café de filtro y postre de la casa. Pet friendly." },
   { id: "e4",  biz: "n9",  d: 2, time: "18:30", type: "cultura", price: "Entrada libre",         title: "Club de lectura: cuentos de autores locales", desc: "Esta sesión leemos y conversamos sobre cuentos de escritores de la ciudad. Trae tu café y tu opinión." },
-  { id: "e5",  biz: "n17", d: 2, time: "20:00", type: "deporte", price: "Entrada libre",         title: "Fútbol en pantalla gigante", desc: "Transmitimos el partido de la jornada con tapas y cerveza artesanal en promoción." },
-  { id: "e6",  biz: "n19", d: 3, time: "20:00", type: "cultura", price: "Boleta $25.000",        title: "Noche de comedia en vivo", desc: "Cuatro comediantes locales en una sola noche. Cupos limitados; compra tu boleta en línea." },
-  { id: "e7",  biz: "n35", d: 4, time: "10:00", type: "taller",  price: "$60.000 · cupos limitados", title: "Taller de repostería para principiantes", desc: "Aprende dos recetas desde cero con todos los materiales incluidos. Traes tu delantal y las ganas." },
-  { id: "e8",  biz: "n32", d: 5, time: "16:00", type: "gastro",  price: "Reserva por WhatsApp",  title: "Domingo de parrilla con vista", desc: "Parrilla para compartir, música suave y la mejor vista de la tarde. Ideal para celebraciones." },
-  { id: "e9",  biz: "n14", d: 6, time: "14:00", type: "promo",   price: "Entrada libre",         title: "Feria de ropa vintage: cambia tu prenda", desc: "Trae una prenda en buen estado y cámbiala por otra. Habrá descuentos en accesorios." },
   { id: "e10", biz: "n26", d: 7, time: "17:00", type: "cultura", price: "Entrada libre",         title: "Inauguración de exposición", desc: "Abrimos una nueva exposición de arte contemporáneo con la presencia de los artistas." },
-  { id: "e11", biz: "n29", d: 9, time: "15:00", type: "promo",   price: "Hasta 30 % de descuento", title: "Tarde de descuentos en nueva colección", desc: "Descuentos escalonados en la nueva colección y ajustes gratis el mismo día." },
-  { id: "e12", biz: "n16", d: 10, time: "16:00", type: "ocio",   price: "Cupos limitados",       title: "Torneo de juegos de mesa", desc: "Equipos de cuatro personas, premios para los ganadores y snacks incluidos." }
+  { id: "e11", biz: "n29", d: 9, time: "15:00", type: "promo",   price: "Hasta 30 % de descuento", title: "Tarde de descuentos en nueva colección", desc: "Descuentos escalonados en la nueva colección y ajustes gratis el mismo día." }
 ];
 window.EVENT_TYPES.push({ id: "ocio", label: "Planes" });
 
 /* ============================================================
-   RESEÑAS DE EJEMPLO — para mostrar cómo se ve la sección.
-   Se marcan siempre como «Ejemplo». Las reseñas reales llegarán
-   de usuarios con cuenta y pasarán por moderación.
+   RESEÑAS DE EJEMPLO — solo para un negocio de ejemplo, para mostrar
+   cómo se ve la sección. Se marcan siempre como «Ejemplo». Las reseñas
+   reales llegarán de usuarios con cuenta y pasarán por moderación.
    ============================================================ */
 window.REVIEWS_SEED = [
-  { biz: "n3",  stars: 5, name: "Visitante de ejemplo", daysAgo: 6,  text: "Buen ambiente y los cocteles muy bien preparados. La vista es lo mejor." },
-  { biz: "n3",  stars: 4, name: "Visitante de ejemplo", daysAgo: 20, text: "Recomendable reservar por WhatsApp porque se llena los viernes." },
-  { biz: "n6",  stars: 5, name: "Visitante de ejemplo", daysAgo: 3,  text: "Pedir con el código QR de la mesa fue muy cómodo y la comida llegó rápido." },
-  { biz: "n7",  stars: 4, name: "Visitante de ejemplo", daysAgo: 12, text: "Brunch rico, opciones vegetarianas y aceptan mascotas." },
-  { biz: "n9",  stars: 5, name: "Visitante de ejemplo", daysAgo: 9,  text: "Librería con mucho encanto. El club de lectura es muy acogedor." },
-  { biz: "n11", stars: 4, name: "Visitante de ejemplo", daysAgo: 15, text: "El almuerzo ejecutivo tiene buena porción y buen precio." },
-  { biz: "n13", stars: 5, name: "Visitante de ejemplo", daysAgo: 2,  text: "Los helados con sabores colombianos son una delicia." },
-  { biz: "n13", stars: 5, name: "Visitante de ejemplo", daysAgo: 30, text: "Hacer el pedido por WhatsApp fue muy fácil." },
-  { biz: "n19", stars: 4, name: "Visitante de ejemplo", daysAgo: 8,  text: "Una noche muy divertida. Llegar temprano para conseguir buen puesto." },
-  { biz: "n32", stars: 5, name: "Visitante de ejemplo", daysAgo: 5,  text: "Celebramos un cumpleaños aquí y la vista fue protagonista." },
-  { biz: "n35", stars: 4, name: "Visitante de ejemplo", daysAgo: 11, text: "Los waffles están muy buenos y el lugar es tranquilo." }
+  { biz: "n9", stars: 5, name: "Visitante de ejemplo", daysAgo: 9, text: "Librería con mucho encanto. El club de lectura es muy acogedor." }
 ];

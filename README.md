@@ -1,4 +1,4 @@
-# Descubre Medellín · by SONETIX (prototipo de interfaz)
+# Parchea · by SONETIX (prototipo de interfaz)
 
 Nombre **provisional**. Prototipo estático (HTML + CSS + JS) del diseño de la plataforma: inicio, mapa interactivo, fichas, barrios, sección comercial de SONETIX y formulario de cotización.
 
@@ -49,12 +49,12 @@ En el repositorio: Settings → Pages → Build and deployment → Source: «Dep
 - `admin.html`, `css/admin.css`, `js/admin.js`: panel administrativo.
 - `index.html`: estructura de todas las secciones.
 - `css/style.css`: paleta SONETIX (tokens al inicio), modo oscuro por defecto y modo claro.
-- `js/data.js`: **datos de ejemplo** (negocios, barrios, categorías) y el número de WhatsApp de SONETIX (`SONETIX_WHATSAPP`, vacío).
+- `js/data.js`: negocios reales (El Coctelazo, 6 sedes, y Coctelazo & Perritos Gourmet, con `real: true`: horarios por día `hours.byDay`, WhatsApp `wa`, carta `menu`, fotos en `img/negocios/`) más 5 negocios de ejemplo (`example: true`), barrios, categorías y el número de WhatsApp de SONETIX (`SONETIX_WHATSAPP`, vacío).
 - `js/app.js`: mapa, filtros, buscador, fichas, modales, formularios y tema.
 
 ## Lo que es de demostración
 
-- Los 36 negocios, sus descripciones y ubicaciones son inventados. Las coordenadas son aproximadas.
+- Solo 5 negocios son inventados (`example: true`). Los reales salen de sus sitios oficiales; sus coordenadas son aproximadas (precisión de barrio).
 - Los precios de los planes son de referencia, por confirmar.
 - Las solicitudes (cotización, reclamar ficha, retirar negocio) se guardan solo en el navegador (`localStorage`, clave `dm_leads`). No hay servidor.
 - La política de datos es un borrador pendiente de revisión legal.
@@ -67,3 +67,9 @@ En el repositorio: Settings → Pages → Build and deployment → Source: «Dep
 3. Panel administrativo de prospectos (ver documento estratégico).
 4. Migrar a Next.js + TypeScript para SEO por barrio y categoría.
 5. Configurar `SONETIX_WHATSAPP`, nombre definitivo y logo.
+
+## Confianza y publicación
+- `SONETIX_WHATSAPP` (js/data.js) ya apunta al WhatsApp de SONETIX: los botones de cotizar abren el chat con el mensaje armado.
+- Sección «Cómo trabajamos» y preguntas frecuentes en la portada (`#proceso`, `#faq`); el JSON-LD del `<head>` repite esas preguntas.
+- Vista previa al compartir: etiquetas Open Graph/Twitter, `img/og-sonetix.png`, `favicon.svg`, `img/apple-touch-icon.png`, `robots.txt` y `sitemap.xml`. Las URLs absolutas usan `https://emanuelvm2002.github.io/Sonetix-2.0/`: cambiarlas cuando exista dominio propio.
+- `privacidad.html`: política de tratamiento de datos (Ley 1581 de 2012) y reglas de reseñas. Falta completar razón social, NIT y correo del responsable y revisarla con un abogado antes del lanzamiento.

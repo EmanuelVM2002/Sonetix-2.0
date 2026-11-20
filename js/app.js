@@ -1,4 +1,4 @@
-/* Descubre Medellín · by SONETIX — prototipo de interfaz (sin servidor).
+/* Parchea · by SONETIX — prototipo de interfaz (sin servidor).
    Los datos vienen de js/data.js. Las solicitudes se guardan solo en este navegador (localStorage). */
 (() => {
   'use strict';
@@ -35,15 +35,19 @@
     const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(g('weekday'));
     return { day, t: (+g('hour') % 24) + (+g('minute')) / 60 };
   }
+  /* horario de un día: [abre, cierra] o null si cierra. close > 24 = pasada la medianoche */
+  const slotOf = (h, d) => h.byDay ? (h.byDay[d] || null) : (h.days.includes(d) ? [h.open, h.close] : null);
   function isOpen(b) {
     const { day, t } = bogotaNow(), h = b.hours;
-    if (h.days.includes(day) && t >= h.open && t < Math.min(h.close, 24)) return true;
-    return h.close > 24 && h.days.includes((day + 6) % 7) && t < h.close - 24;
+    const s = slotOf(h, day);
+    if (s && t >= s[0] && t < Math.min(s[1], 24)) return true;
+    const p = slotOf(h, (day + 6) % 7);
+    return !!(p && p[1] > 24 && t < p[1] - 24);
   }
   const fmtH = n => { const x = n % 24; return String(Math.floor(x)).padStart(2, '0') + ':' + String(Math.round((x % 1) * 60)).padStart(2, '0'); };
   function hoursToday(b) {
-    const { day } = bogotaNow(), h = b.hours;
-    return h.days.includes(day) ? `Hoy ${fmtH(h.open)} – ${fmtH(h.close)}` : 'Hoy cerrado';
+    const { day } = bogotaNow(), s = slotOf(b.hours, day);
+    return s ? `Hoy ${fmtH(s[0])} – ${fmtH(s[1])}` : 'Hoy cerrado';
   }
 
   /* ---------- estado ---------- */
@@ -115,6 +119,8 @@
     theme = theme === 'dark' ? 'light' : 'dark';
     store.set('dm_theme', theme); applyTheme();
     if (map) { try { map.setStyle(await getStyle(), { diff: false }); } catch { /* el mapa conserva el estilo anterior */ } }
+    if (heroMap && heroMap.setStyle) { try { heroMap.setStyle(heroStyleFrom(await loadBase()), { diff: false }); } catch { /* conserva el estilo anterior */ } }
+    if (liveMap && liveMap.setStyle) { try { liveMap.setStyle(await getStyle(), { diff: false }); } catch { /* conserva el estilo anterior */ } }
   });
   applyTheme();
   $('#yr').textContent = new Date().getFullYear();
@@ -390,10 +396,10 @@
     listEl.innerHTML = list.map(b => {
       const open = isOpen(b), rt = ratingOf(b.id), nev = (EVB[b.id] || []).length;
       return `<li><button class="card${state.selected === b.id ? ' on' : ''}" data-id="${b.id}" type="button">
-        <span class="thumb${b.webBy ? ' sx' : ''}">${catIco(b.cat)}</span>
+        <span class="thumb${b.webBy ? ' sx' : ''}${b.logo ? ' logo' : ''}">${b.logo ? `<img src="${esc(b.logo)}" alt="" loading="lazy">` : catIco(b.cat)}</span>
         <span class="card-t"><strong>${esc(b.name)}</strong>
           <small>${CATS[b.cat].label} · ${esc(BAR[b.barrio].name)}</small>
-          <span class="meta"><span class="${open ? 'open-b' : 'closed-b'}">${open ? 'Abierto' : 'Cerrado'}</span><span>${PRICE[b.price]}</span>${rt.n ? `<span class="rt">★ ${avgTxt(rt.avg)} <small>(${rt.n})</small></span>` : ''}${nev ? '<span class="evtag">Evento</span>' : ''}${b.claimed ? '' : '<span class="unc">Sin reclamar</span>'}</span>
+          <span class="meta"><span class="${open ? 'open-b' : 'closed-b'}">${open ? 'Abierto' : 'Cerrado'}</span><span>${PRICE[b.price]}</span>${rt.n ? `<span class="rt">★ ${avgTxt(rt.avg)} <small>(${rt.n})</small></span>` : ''}${nev ? '<span class="evtag">Evento</span>' : ''}${b.claimed ? '' : '<span class="unc">Sin reclamar</span>'}${b.example ? '<span class="exm-t">Ejemplo</span>' : ''}</span>
         </span></button></li>`;
     }).join('');
   }
@@ -528,8 +534,7 @@
   const DAYN = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   function weekHTML(b) {
     const { day } = bogotaNow(), h = b.hours;
-    return `<details class="wk"><summary><b>${hoursToday(b)}</b><i aria-hidden="true"></i></summary><ul>${[1, 2, 3, 4, 5, 6, 0].map(d =>
-      `<li class="${d === day ? 'today' : ''}"><span>${DAYN[d]}</span><span>${h.days.includes(d) ? fmtH(h.open) + ' – ' + fmtH(h.close) : 'Cerrado'}</span></li>`).join('')}</ul></details>`;
+    return `<details class="wk"><summary><b>${hoursToday(b)}</b><i aria-hidden="true"></i></summary><ul>${[1, 2, 3, 4, 5, 6, 0].map(d => { const s = slotOf(h, d); return `<li class="${d === day ? 'today' : ''}"><span>${DAYN[d]}</span><span>${s ? fmtH(s[0]) + ' – ' + fmtH(s[1]) : 'Cerrado'}</span></li>`; }).join('')}</ul>${b.hoursNote ? `<p class="wk-note">${esc(b.hoursNote)}</p>` : ''}</details>`;
   }
 
   /* visor de fotos */
@@ -570,6 +575,23 @@
       <ul class="rev-list">${list.slice(0, 6).map((r, i) => `<li><div class="rev-h">${starsHTML(r.stars)}<span><strong>${esc(r.name || 'Anónimo')}</strong> · ${fmtDate(r.at)}${r.example ? ' <em class="exm">Ejemplo</em>' : ''}${r.mine ? ' <em class="exm mine">Tuya</em>' : ''}</span></div>${r.text ? `<p>${esc(r.text)}</p>` : ''}${r.mine ? '' : `<button class="link rep" type="button" data-rep="${i}">Reportar</button>`}</li>`).join('')}</ul>`;
   }
 
+  /* carta destacada de negocios reales */
+  const fmtCOP = n => '$' + n.toLocaleString('es-CO');
+  function menuHTML(b) {
+    const m = b.menu; if (!m || !m.items.length) return '';
+    return `<div class="f-menu"><h4>Carta destacada</h4>
+      <ul>${m.items.map(i => `<li>${i.img ? `<img src="${esc(i.img)}" alt="${esc(i.name)}" loading="lazy">` : ''}<span class="mi-t"><strong>${esc(i.name)}</strong>${i.detail ? `<small>${esc(i.detail)}</small>` : ''}</span><b class="mi-p">${i.from ? '<i>desde</i> ' : ''}${fmtCOP(i.price)}</b></li>`).join('')}</ul>
+      <p class="mi-note">${esc(m.note || '')}${m.url ? ` <a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Ver la carta completa</a>` : ''}</p></div>`;
+  }
+  /* otras sedes de la misma marca */
+  function sedesHTML(b) {
+    if (!b.brand) return '';
+    const o = BUSINESSES.filter(x => x.brand === b.brand && x.id !== b.id);
+    if (!o.length) return '';
+    return `<div class="f-sedes"><h4>Otras sedes de ${esc(b.brand)}</h4><div>${o.map(x => `<button type="button" class="sede" data-sede="${x.id}"><strong>${esc(x.sede || x.name)}</strong><small>${esc(x.address || BAR[x.barrio].name)}</small></button>`).join('')}</div></div>`;
+  }
+  const bizWa = b => 'https://wa.me/' + b.wa + (b.waText ? '?text=' + encodeURIComponent(b.waText) : '');
+
   function fichaHTML(b) {
     const open = isOpen(b), fav = favs.includes(b.id);
     const dest = `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}`;
@@ -579,27 +601,31 @@
         <button class="f-save" type="button" data-act="save" aria-pressed="${fav}" aria-label="${fav ? 'Quitar de guardados' : 'Guardar negocio'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.5 5.3 5.3 0 0 1 21.3 12c-2.300 4.400-9.300 9-9.300 9z"/></svg></button>
       </div>
       <div class="f-body">
-        <div><h3>${esc(b.name)}</h3>
+        <div><h3>${b.logo ? `<img class="f-logo" src="${esc(b.logo)}" alt="">` : ''}${esc(b.name)}</h3>
           <div class="f-sub"><span>${CATS[b.cat].label}</span><span class="sep">·</span><span>${esc(BAR[b.barrio].name)}</span><span class="sep">·</span><span>${PRICE[b.price]}</span>
             <span class="sep">·</span><span class="${open ? 'open-b' : 'closed-b'}">${open ? 'Abierto ahora' : 'Cerrado ahora'}</span></div></div>
         ${b.desc ? `<p class="f-desc">${esc(b.desc)}</p>` : ''}
         ${b.services.length ? `<div class="tags">${b.services.map(s => `<span class="tag">${esc(s)}</span>`).join('')}</div>` : ''}
         <div class="f-info">
           <div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>${weekHTML(b)}</div>
-          <div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.100 7-11a7 7 0 0 0-14 0c0 4.900 7 11 7 11z"/><circle cx="12" cy="10" r="2.500"/></svg><span>${esc(BAR[b.barrio].name)}, Medellín</span></div>
+          <div><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s7-6.100 7-11a7 7 0 0 0-14 0c0 4.900 7 11 7 11z"/><circle cx="12" cy="10" r="2.500"/></svg><span>${b.address ? esc(b.address) + ' · ' : ''}${esc(BAR[b.barrio].name)}, Medellín</span></div>
+          ${b.delivery ? `<div><svg class="ico" viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.700 1.700 0 1 0 0-.1zM17 19a1.700 1.700 0 1 0 0-.1z"/></svg><span>${esc(b.delivery)}</span></div>` : ''}
           ${b.ig ? `<div><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.500 6.500h.01"/></svg><span>@${esc(b.ig)}</span></div>` : ''}
         </div>
-        ${b.webBy ? `<div class="sx-badge"><span class="eq" aria-hidden="true"><b></b><b></b><b></b><b></b></span><span><strong>Sitio creado por SONETIX</strong>Un ejemplo de lo que podemos hacer por tu negocio.</span></div>` : ''}
+        ${b.webBy ? `<div class="sx-badge"><span class="eq" aria-hidden="true"><b></b><b></b><b></b><b></b></span><span><strong>Sitio creado por SONETIX</strong>${b.real ? 'Cliente de SONETIX: esta es su página real.' : 'Un ejemplo de lo que podemos hacer por tu negocio.'}</span></div>` : ''}
         <div class="f-act">
-          <button class="btn btn-red wide" type="button" data-act="wa">Escribir por WhatsApp</button>
+          ${b.wa ? `<a class="btn btn-red wide" href="${esc(bizWa(b))}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>` : `<button class="btn btn-red wide" type="button" data-act="wa">Escribir por WhatsApp</button>`}
           ${b.web ? `<a class="btn btn-ghost" href="${esc(b.web)}" target="_blank" rel="noopener noreferrer">Sitio oficial</a>` : `<span></span>`}
           <a class="btn btn-ghost" href="${dest}" target="_blank" rel="noopener noreferrer">Cómo llegar</a>
         </div>
+        ${b.notice ? `<p class="f-notice">${esc(b.notice)}</p>` : ''}
+        ${menuHTML(b)}
+        ${sedesHTML(b)}
         ${(EVB[b.id] || []).length ? `<div class="f-ev"><h4>Próximos eventos</h4>${EVB[b.id].map(e => `<button class="f-evi" type="button" data-ev="${e.id}"><span class="d"><b>${fmtDayNum.format(evWhen(e))}</b><i>${fmtMon.format(evWhen(e)).replace('.', '')}</i></span><span class="t"><strong>${esc(e.title)}</strong><small>${evLabel(e)} · ${e.time} · ${esc(e.price)}</small></span></button>`).join('')}</div>` : ''}
         <div class="rev" id="revBlock">${reviewsHTML(b)}</div>
         ${b.claimed ? '' : `<div class="claim-box"><p><strong>Ficha sin reclamar.</strong> Solo mostramos datos públicos. Si este es tu negocio, reclámala gratis y completa fotos, horarios y enlaces.</p>
           <button class="btn btn-red" type="button" data-act="claim">Reclamar esta ficha</button></div>`}
-        <p class="note-demo">Datos de ejemplo para la demostración.</p>
+        <p class="note-demo">${b.real ? 'Información tomada del sitio oficial del negocio. La ubicación en el mapa es aproximada.' : 'Negocio de ejemplo, no existe en la realidad.'}</p>
       </div>`;
   }
 
@@ -646,6 +672,7 @@
       if (r) { saveLead('reporte', { biz: BIZ[state.selected].name, reviewer: r.name || 'Anónimo', text: r.text || '(solo calificación)' }); rep.textContent = 'Reportada, gracias'; rep.disabled = true; toast('Gracias. Revisaremos esta reseña.'); }
       return;
     }
+    const sd = e.target.closest('[data-sede]'); if (sd) { select(sd.dataset.sede); return; }
     const a = e.target.closest('[data-act]'); if (!a) return;
     const b = BIZ[state.selected];
     if (a.dataset.act === 'close') closeFicha();
@@ -867,12 +894,11 @@
     });
   }
   function openPolicy() {
-    openModal(`<h3>Política de tratamiento de datos</h3>
-      <p><strong>Borrador pendiente de revisión legal antes del lanzamiento.</strong></p>
-      <p><b>Qué datos usamos:</b> datos comerciales públicos de los negocios (nombre, categoría, ubicación, horarios, enlaces) y los datos que tú nos das en los formularios (nombre, negocio, WhatsApp).</p>
-      <p><b>Para qué:</b> mostrar el mapa, atender tus solicitudes de ficha o cotización y, si lo autorizas, contactarte con una propuesta.</p>
-      <p><b>Tus derechos:</b> conocer, actualizar, rectificar y suprimir tus datos, y pedir que no te contactemos. Puedes usar «Solicitar retirar mi negocio» en el pie de página.</p>
-      <p><b>Fotos y contenidos:</b> solo se publican con autorización del dueño del negocio.</p>
+    openModal(`<h3>Tratamiento de datos personales</h3>
+      <p><b>Qué datos usamos:</b> los que nos das en los formularios (nombre, negocio, WhatsApp, mensaje y, si quieres, fotos) y datos comerciales públicos de los negocios.</p>
+      <p><b>Para qué:</b> responder tu solicitud, verificar tu negocio y mostrar el mapa. Nunca vendemos tus datos.</p>
+      <p><b>Tus derechos:</b> conocer, actualizar, rectificar y suprimir tus datos, revocar tu autorización y presentar quejas ante la SIC. Escríbenos por WhatsApp o usa «Solicitar retirar mi negocio».</p>
+      <p><a href="privacidad.html" target="_blank" rel="noopener">Leer la política de privacidad completa</a></p>
       <button class="btn btn-ghost" type="button" data-close>Cerrar</button>`);
   }
   document.addEventListener('click', e => {
@@ -891,6 +917,10 @@
     const l = waLink('Hola SONETIX, quiero información sobre una página web para mi negocio.');
     l ? open(l, '_blank', 'noopener') : toast('Falta configurar el número de WhatsApp de SONETIX (js/data.js).');
   });
+  document.querySelectorAll('[data-wa]').forEach(b => b.addEventListener('click', () => {
+    const l = waLink(b.dataset.wa);
+    l ? open(l, '_blank', 'noopener') : toast('Falta configurar el número de WhatsApp de SONETIX (js/data.js).');
+  }));
   const qf = $('#quoteForm');
   qf.addEventListener('submit', e => {
     e.preventDefault();
@@ -1071,6 +1101,14 @@
         const t = setInterval(() => { n = Math.min(end, n + step); dd.textContent = n; if (n >= end) clearInterval(t); }, 45);
       });
     }
+    const hh = $('#inicio'), hm = $('.h2-map');
+    if (hh && hm && !reduceMotion && matchMedia('(pointer: fine)').matches) {
+      hh.addEventListener('pointermove', e => {
+        const r = hh.getBoundingClientRect();
+        hm.style.setProperty('--px', (((e.clientX - r.left) / r.width - 0.5) * 2).toFixed(3));
+        hm.style.setProperty('--py', (((e.clientY - r.top) / r.height - 0.5) * 2).toFixed(3));
+      }, { passive: true });
+    }
     skyline();
   }
 
@@ -1143,13 +1181,132 @@
 
   function spy() {
     if (!('IntersectionObserver' in window)) return;
-    const links = $$('.menu a'), byId = {};
+    const links = $$('.menu a'), byId = {}, ALIAS = { casesGrid: 'trabajos', como: '/mapa', mapTeaser: '/mapa', barrios: '/mapa', eventos: '/mapa' };
     links.forEach(a => { byId[a.getAttribute('href').slice(1)] = a; });
     const io = new IntersectionObserver(es => es.forEach(en => {
-      if (en.isIntersecting && !isMapView()) links.forEach(a => a.classList.toggle('on', a === byId[en.target.id]));
+      if (en.isIntersecting && !isMapView()) links.forEach(a => a.classList.toggle('on', a === byId[ALIAS[en.target.id] || en.target.id]));
     }), { rootMargin: '-45% 0px -50% 0px' });
-    ['barrios', 'eventos', 'negocios', 'cotizar'].forEach(id => { const s = document.getElementById(id); if (s) io.observe(s); });
+    ['negocios', 'casesGrid', 'como', 'mapTeaser', 'barrios', 'eventos', 'cotizar'].forEach(id => { const s = document.getElementById(id); if (s) io.observe(s); });
     new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting && !isMapView()) links.forEach(a => a.classList.remove('on')); }), { rootMargin: '-45% 0px -50% 0px' }).observe($('#inicio'));
+  }
+
+  /* ---------- mapa de Medellín como fondo sutil de la portada ---------- */
+  let heroMap = null;
+  async function loadBase() {
+    if (!baseStyle) baseStyle = await (await fetch('https://tiles.openfreemap.org/styles/positron')).json();
+    return baseStyle;
+  }
+  /* Estilo «dibujo de líneas»: sin etiquetas, fondo transparente, calles casi invisibles y avenidas en rojo. */
+  function heroStyleFrom(base) {
+    const dark = theme === 'dark', s = JSON.parse(JSON.stringify(base));
+    const line = dark ? 'rgba(255,255,255,0.05)' : 'rgba(5,5,5,0.075)';
+    const major = dark ? 'rgba(255,10,30,0.17)' : 'rgba(224,8,27,0.17)';
+    s.layers = s.layers.filter(l => l.type !== 'symbol');
+    for (const l of s.layers) {
+      const p = l.paint = l.paint || {};
+      if (l.type === 'background') p['background-color'] = 'rgba(0,0,0,0)';
+      else if (l.type === 'fill') {
+        if (l.id === 'water') p['fill-color'] = dark ? 'rgba(255,255,255,0.03)' : 'rgba(5,5,5,0.055)';
+        else if (/park|wood/.test(l.id)) p['fill-color'] = dark ? 'rgba(255,255,255,0.02)' : 'rgba(5,5,5,0.035)';
+        else p['fill-opacity'] = 0;
+      } else if (l.type === 'line') {
+        if (/casing|dashline|boundary|railway|aeroway|waterway/.test(l.id)) p['line-opacity'] = 0;
+        else p['line-color'] = /major|motorway/.test(l.id) ? major : line;
+      }
+    }
+    return s;
+  }
+  function addHeroLayers() {
+    const red = theme === 'dark' ? '#ff0a1e' : '#e0081b';
+    if (!heroMap.getSource('hz')) heroMap.addSource('hz', { type: 'geojson', data: zonesFC(BUSINESSES) });
+    heroMap.addLayer({ id: 'hz-glow', type: 'circle', source: 'hz', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 26, 14, 80], 'circle-color': red, 'circle-opacity': theme === 'dark' ? 0.15 : 0.11, 'circle-blur': 0.9 } });
+    heroMap.addLayer({ id: 'hz-ring', type: 'circle', source: 'hz', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 6, 14, 18], 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': red, 'circle-stroke-width': 1, 'circle-stroke-opacity': 0.55 } });
+    heroMap.addLayer({ id: 'hz-dot', type: 'circle', source: 'hz', paint: { 'circle-radius': 2.6, 'circle-color': red, 'circle-opacity': 0.95 } });
+  }
+  async function ensureHeroMap() {
+    const el = $('#heroMap'); if (!el || typeof maplibregl === 'undefined') return;
+    if (heroMap) { if (heroMap.resize) heroMap.resize(); return; }
+    heroMap = {};                                   // marca de «iniciando»
+    try {
+      const base = await loadBase();
+      const m = new maplibregl.Map({
+        container: 'heroMap', style: heroStyleFrom(base), center: [-75.618, 6.255], zoom: 12.3, pitch: 50, bearing: -16,
+        interactive: false, attributionControl: false, fadeDuration: 0
+      });
+      heroMap = m;
+      m.on('style.load', addHeroLayers);
+      if ('ResizeObserver' in window) new ResizeObserver(() => m.resize()).observe(el);
+    } catch { heroMap = null; }
+  }
+
+  /* ---------- vista previa viva de Parchea en la portada (mapa interactivo grande) ---------- */
+  let liveMap = null, liveWatch = false;
+  function addLiveLayers() {
+    const c = pal(), RED = '#ff0a1e', dark = theme === 'dark';
+    const H = ['boolean', ['feature-state', 'hover'], false];
+    const fadeOut = ['interpolate', ['linear'], ['zoom'], 13.2, 1, ZOOM_PINS, 0], fadeIn = ['interpolate', ['linear'], ['zoom'], 13.3, 0, ZOOM_PINS, 1];
+    liveMap.addSource('lz', { type: 'geojson', data: zonesFC(BUSINESSES), promoteId: 'id' });
+    liveMap.addSource('lp', { type: 'geojson', data: toFC(BUSINESSES), promoteId: 'id' });
+    const zr = ['+', 15, ['*', 2.6, ['sqrt', ['get', 'count']]]];
+    liveMap.addLayer({ id: 'lz-bubble', type: 'circle', source: 'lz', maxzoom: ZOOM_PINS,
+      paint: { 'circle-radius': ['case', H, ['+', zr, 4], zr], 'circle-color': dark ? '#151518' : '#ffffff', 'circle-opacity': fadeOut,
+        'circle-stroke-color': RED, 'circle-stroke-width': ['case', H, 2.5, 1.5], 'circle-stroke-opacity': fadeOut } });
+    liveMap.addLayer({ id: 'lz-count', type: 'symbol', source: 'lz', maxzoom: ZOOM_PINS,
+      layout: { 'text-field': ['to-string', ['get', 'count']], 'text-font': FONT, 'text-size': 14, 'text-allow-overlap': true },
+      paint: { 'text-color': c.txt, 'text-opacity': fadeOut } });
+    liveMap.addLayer({ id: 'lz-name', type: 'symbol', source: 'lz', maxzoom: ZOOM_PINS,
+      layout: { 'text-field': ['get', 'name'], 'text-font': FONT, 'text-size': 12, 'text-anchor': 'top', 'text-offset': [0, 2.5], 'text-optional': true },
+      paint: { 'text-color': c.txt, 'text-halo-color': c.halo, 'text-halo-width': 1.4, 'text-opacity': fadeOut } });
+    liveMap.addLayer({ id: 'lp-pins', type: 'circle', source: 'lp', minzoom: 13.3,
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 4, 16, 8.5],
+        'circle-color': ['case', ['==', ['get', 'by'], 'sonetix'], RED, ['get', 'claimed'], c.pin, 'rgba(142,144,154,0.22)'],
+        'circle-stroke-color': ['case', ['==', ['get', 'by'], 'sonetix'], '#ffffff', ['get', 'claimed'], c.stroke, c.unc],
+        'circle-stroke-width': 2, 'circle-opacity': fadeIn, 'circle-stroke-opacity': fadeIn } });
+  }
+  async function ensureLiveMap() {
+    const el = $('#liveMap'); if (!el || typeof maplibregl === 'undefined' || liveMap) return;
+    liveMap = {};
+    try {
+      const style = await getStyle();
+      const m = new maplibregl.Map({
+        container: 'liveMap', style, center: [-75.585, 6.25], zoom: 11.7, minZoom: 10.5, maxZoom: 17, pitch: 42, bearing: -12,
+        attributionControl: { compact: true }, cooperativeGestures: true,
+        locale: { 'CooperativeGesturesHandler.WindowsHelpText': 'Usa Ctrl + scroll para acercar el mapa', 'CooperativeGesturesHandler.MacHelpText': 'Usa ⌘ + scroll para acercar el mapa', 'CooperativeGesturesHandler.MobileHelpText': 'Usa dos dedos para mover el mapa', 'NavigationControl.ZoomIn': 'Acercar', 'NavigationControl.ZoomOut': 'Alejar' }
+      });
+      liveMap = m;
+      m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+      m.on('style.load', addLiveLayers);
+      if ('ResizeObserver' in window) new ResizeObserver(() => m.resize()).observe(el);
+      const pop = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 16, className: 'tip' });
+      let hz = null;
+      const setHz = id => {
+        if (hz && hz !== id) { try { m.setFeatureState({ source: 'lz', id: hz }, { hover: false }); } catch { /* ignorar */ } }
+        hz = id; if (id) { try { m.setFeatureState({ source: 'lz', id }, { hover: true }); } catch { /* ignorar */ } }
+      };
+      m.on('mouseenter', 'lz-bubble', e => {
+        m.getCanvas().style.cursor = 'pointer';
+        const f = e.features[0], p = f.properties; setHz(p.id);
+        pop.setLngLat(f.geometry.coordinates).setHTML(`<div class="mp"><div><strong>${esc(p.name)}</strong><small>${p.count} ${p.count === 1 ? 'negocio' : 'negocios'} · toca para entrar</small></div></div>`).addTo(m);
+      });
+      m.on('mouseleave', 'lz-bubble', () => { m.getCanvas().style.cursor = ''; setHz(null); pop.remove(); });
+      m.on('click', 'lz-bubble', e => { const card = $(`#barriosGrid .barrio[data-id="${e.features[0].properties.id}"]`); if (card) card.click(); });
+      m.on('mouseenter', 'lp-pins', e => {
+        m.getCanvas().style.cursor = 'pointer';
+        const f = e.features[0], b = BIZ[f.properties.id]; if (b) pop.setLngLat(f.geometry.coordinates).setHTML(tipHTML(b)).addTo(m);
+      });
+      m.on('mouseleave', 'lp-pins', () => { m.getCanvas().style.cursor = ''; pop.remove(); });
+      m.on('click', 'lp-pins', e => { location.hash = '#/mapa/' + e.features[0].properties.id; });
+    } catch { liveMap = null; }
+  }
+  /* el mapa de la portada solo se crea cuando está cerca de verse */
+  function watchLiveMap() {
+    if (liveWatch) { if (liveMap && liveMap.resize) liveMap.resize(); return; }
+    const el = $('#liveMap'); if (!el) return; liveWatch = true;
+    const lc = $('#liveCount'); if (lc) lc.textContent = BUSINESSES.length;
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { io.disconnect(); ensureLiveMap(); } }, { rootMargin: '400px' });
+      io.observe(el);
+    } else ensureLiveMap();
   }
 
   /* ---------- pantallas: portada y mapa (ruta #/mapa) ---------- */
@@ -1160,6 +1317,7 @@
     const h = location.hash, mm = /^#\/mapa(?:\/(\w+))?/.exec(h) || /^#n=(\w+)/.exec(h);
     const wantMap = !!mm;
     document.body.classList.toggle('view-map', wantMap);
+    document.title = wantMap ? 'Parchea · el mapa de Medallo | SONETIX' : 'SONETIX · Páginas web a la medida';
     $$('.menu a').forEach(a => a.classList.toggle('on', wantMap && a.dataset.route === 'mapa'));
     menu.classList.remove('open'); burger.setAttribute('aria-expanded', 'false');
     if (wantMap) {
@@ -1169,6 +1327,8 @@
       const id = mm[1];
       if (id && BIZ[id] && state.selected !== id) setTimeout(() => select(id, { from: 'list' }), map ? 100 : 900);
     } else {
+      ensureHeroMap();
+      watchLiveMap();
       const el = h.length > 1 ? document.getElementById(decodeURIComponent(h.slice(1))) : null;
       setTimeout(() => { if (el) el.scrollIntoView({ behavior: 'auto' }); else window.scrollTo(0, 0); }, 30);
     }

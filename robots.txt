@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+
+Sitemap: https://emanuelvm2002.github.io/Sonetix-2.0/sitemap.xml

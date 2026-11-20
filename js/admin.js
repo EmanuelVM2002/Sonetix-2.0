@@ -58,7 +58,7 @@
 
   /* ---------- datos ---------- */
   let P = [];
-  const save = () => store.set('dm_admin', JSON.stringify({ v: 1, prospects: P }));
+  const save = () => store.set('dm_admin', JSON.stringify({ v: 2, prospects: P }));
 
   function blank(o) {
     return Object.assign({
@@ -77,8 +77,13 @@
       const r = k => rnd(i + 1, k);
       const p = blank({
         id: b.id, name: b.name, cat: b.cat, barrio: b.barrio, lat: b.lat, lng: b.lng, ig: b.ig || '', web: b.web || '',
-        source: 'Datos de ejemplo', sourceDate: t, created: t
+        source: b.real ? 'Cliente de SONETIX' : 'Datos de ejemplo', sourceDate: t, created: t, phone: b.wa ? b.wa.replace(/^57/, '') : ''
       });
+      if (b.real) {
+        p.status = 'cerrado'; p.maxStage = 5;
+        p.notes.push({ at: t, type: 'nota', text: 'Cliente real: sitio web entregado por SONETIX. Plan y valores por registrar.' });
+        return p;
+      }
       p.notes.push({ at: t, type: 'nota', text: 'Registro creado desde los datos de ejemplo.' });
       if (b.webBy) {
         p.status = 'cerrado'; p.maxStage = 5; p.contactedAt = addDays(-40);
@@ -118,7 +123,7 @@
   }
 
   function load() {
-    try { const d = JSON.parse(store.get('dm_admin') || 'null'); if (d && Array.isArray(d.prospects) && d.prospects.length) { P = d.prospects; return; } } catch { /* sembrar */ }
+    try { const d = JSON.parse(store.get('dm_admin') || 'null'); if (d && d.v >= 2 && Array.isArray(d.prospects) && d.prospects.length) { P = d.prospects; return; } } catch { /* sembrar */ }
     P = seed(); save();
   }
 
