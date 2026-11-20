@@ -773,3 +773,77 @@ html[data-theme="light"] .form input[type=date],html[data-theme="light"] .form i
   .case2.flip .c2-shot{order:0}
   .c2-shot{min-height:0}
 }
+
+
+/* =========================================================
+   PORTADA CON ESTILO PROPIO · horizonte de barras (ecualizador SONETIX)
+   + pantalla aparte para el mapa
+   ========================================================= */
+:root{--disp:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1,h2,h3,.logo-t strong,.stats dd,.kpi strong,.how-n,.big{font-family:var(--disp)}
+
+.hero2{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:space-between;padding-top:108px;overflow:hidden;isolation:isolate;
+  background:radial-gradient(110% 70% at 10% -12%,rgba(255,10,30,.22),transparent 58%),radial-gradient(80% 55% at 100% 8%,rgba(160,0,15,.20),transparent 62%),var(--bg)}
+html[data-theme="light"] .hero2{background:radial-gradient(110% 70% at 10% -12%,rgba(224,8,27,.12),transparent 58%),radial-gradient(80% 55% at 100% 8%,rgba(160,0,15,.08),transparent 62%),var(--bg)}
+.h2-in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:22px}
+.h2-tag{display:inline-flex;align-items:center;gap:12px;padding:7px 16px 7px 12px;border:1px solid var(--ln2);border-radius:99px;background:var(--hdr);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:.74rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+.h2-title{font-size:clamp(2.7rem,7.2vw,6.3rem);line-height:.98;letter-spacing:-.045em;font-weight:700}
+.h2-title em{font-style:normal;background:linear-gradient(110deg,var(--red) 10%,var(--redt) 70%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.h2-row{display:flex;justify-content:space-between;align-items:flex-end;gap:28px 48px;flex-wrap:wrap;width:100%}
+.h2-p{max-width:520px;color:var(--mut);font-size:clamp(1rem,1.5vw,1.2rem)}
+.h2-cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn-xl{padding:16px 28px;font-size:1rem}
+.hero2 .search{width:min(560px,100%)}
+.hero2 .quick{justify-content:flex-start}
+
+.sky{position:relative;height:clamp(250px,40vh,420px);margin-top:26px}
+.sky canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sky-tags{position:absolute;inset:0;pointer-events:none}
+.sky-tag{position:absolute;transform:translateX(-50%);pointer-events:auto;display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;background:var(--hdr);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--ln2);font-size:.76rem;font-weight:700;white-space:nowrap;color:var(--ink);transition:transform .25s var(--ease),background .2s,border-color .2s,color .2s}
+.sky-tag small{color:var(--redt);font-weight:800}
+.sky-tag:hover,.sky-tag:focus-visible{border-color:var(--red);background:var(--red);color:#fff;transform:translateX(-50%) translateY(-3px)}
+.sky-tag:hover small,.sky-tag:focus-visible small{color:#fff}
+.sky-hint{position:absolute;left:50%;top:0;transform:translateX(-50%);margin:0;font-size:.74rem;letter-spacing:.06em;color:var(--mut2);pointer-events:none;white-space:nowrap}
+.h2-stats{position:absolute;left:0;right:0;bottom:0;margin:0;padding:40px 20px 22px;background:linear-gradient(0deg,var(--bg) 24%,transparent);pointer-events:none;justify-content:center;gap:clamp(24px,6vw,76px)}
+@media (max-width:760px){.sky-tag,.sky-hint{display:none}.hero2{padding-top:92px}.h2-row{align-items:flex-start}}
+
+/* cómo funciona */
+.how{padding:110px 0 30px}
+.sec-head2{display:flex;flex-direction:column;gap:12px;margin-bottom:42px;max-width:780px}
+.sec-head2 h2{font-size:clamp(1.9rem,4.4vw,3.2rem);line-height:1.05;letter-spacing:-.035em}
+.how-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.how-c{position:relative;padding:30px 26px 28px;border:1px solid var(--ln);border-radius:24px;background:var(--s1);overflow:hidden;transition:transform .35s var(--ease),border-color .3s}
+.how-c::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--red),transparent);transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease)}
+.how-c:hover{border-color:var(--ln2);transform:translateY(-4px)}
+.how-c:hover::after{transform:scaleX(1)}
+.how-n{display:block;margin-bottom:22px;font-size:3.4rem;font-weight:700;letter-spacing:-.05em;line-height:1;color:transparent;-webkit-text-stroke:1px var(--ln2)}
+.how-i{width:30px;height:30px;margin-bottom:14px;fill:none;stroke:var(--red);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.how-c h3{margin:0 0 8px;font-size:1.25rem;letter-spacing:-.02em}
+.how-c p{color:var(--mut);font-size:.95rem}
+@media (max-width:860px){.how-g{grid-template-columns:minmax(0,1fr)}}
+
+/* vista previa del mapa */
+.teaser{padding:70px 0 20px}
+.teaser-g{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(24px,5vw,72px);align-items:center;padding:clamp(26px,4vw,56px);border:1px solid var(--ln);border-radius:32px;background:radial-gradient(120% 90% at 100% 0%,rgba(255,10,30,.10),transparent 60%),var(--s1)}
+.teaser-copy{display:flex;flex-direction:column;gap:18px;align-items:flex-start}
+.teaser-copy h2{font-size:clamp(1.9rem,4vw,3rem);line-height:1.06;letter-spacing:-.035em}
+@media (max-width:900px){.teaser-g{grid-template-columns:minmax(0,1fr)}}
+
+/* el mapa es una pantalla aparte (ruta #/mapa) */
+.only-map{display:none}
+body.view-map .menu .only-map{display:inline-block}
+body:not(.view-map) #explorar{display:none}
+body.view-map main > section:not(#explorar),body.view-map .foot{display:none}
+body.view-map #explorar{padding:0;margin:0}
+body.view-map #explorar .sec-head{display:none}
+body.view-map .explorer{max-width:none;width:100%;margin:68px 0 0;padding:0;height:calc(100svh - 68px);min-height:0;border-radius:0;border-width:1px 0 0;box-shadow:none}
+@media (max-width:960px){body.view-map .explorer{height:auto}}
+
+/* ajuste: la portada completa (texto + horizonte) cabe en una pantalla */
+.hero2{padding-top:96px}
+.h2-in{gap:16px}
+.h2-title{font-size:clamp(2.6rem,6vw,5.3rem)}
+.h2-row{gap:20px 40px}
+.sky{height:clamp(220px,31svh,340px);margin-top:18px}
+.sky-hint{display:none}
+@media (max-height:760px){.hero2 .quick{display:none}}

@@ -10,6 +10,11 @@ node serve.js 8861
 
 y abre http://localhost:8861 (necesita internet: carga MapLibre desde unpkg y el mapa base desde OpenFreeMap).
 
+## Pantallas
+
+- **Portada** (`index.html`): horizonte de barras (el ecualizador de SONETIX convertido en el valle de Medellín; las barras rojas son los barrios y llevan al mapa), cómo funciona, vista previa del mapa, barrios, eventos, sección para negocios, trabajos reales y cotización. Tipografía de marca: Space Grotesk (Google Fonts).
+- **Mapa** (`#/mapa`): pantalla aparte a pantalla completa, con su propio menú (Inicio · Mapa). La portada no carga el mapa hasta que se abre esta pantalla. Enlace a un negocio: `#/mapa/ID` (también se entiende el antiguo `#n=ID`).
+
 ## Mapa
 
 - **Menos saturado:** al alejarse se ven solo burbujas por barrio (nombre y cantidad); los negocios aparecen al acercarse. Las calles menores, los nombres secundarios y los edificios salen solo con zoom alto, y la leyenda es plegable.
@@ -22,7 +27,7 @@ La sección «Trabajos reales» muestra capturas de tres sitios (El Coctelazo, C
 ## Ficha del negocio
 
 - **Galería:** mosaico de fotos con visor (flechas del teclado, Esc, puntos). Si el negocio trae `photos: [{ src, alt, cap }]` en `js/data.js` se usan; si no, se muestran composiciones de ejemplo marcadas «Foto de ejemplo». Las fotos reales solo con permiso del dueño.
-- **Horario semanal** desplegable (resalta el día de hoy) y botón **compartir**: copia un enlace directo (`#n=ID`) que abre el negocio.
+- **Horario semanal** desplegable (resalta el día de hoy) y botón **compartir**: copia un enlace directo (`#/mapa/ID`) que abre el negocio en la pantalla del mapa.
 - **Reclamar ficha con fotos:** hasta 6 imágenes (máx. 5 MB), con vista previa y confirmación de que son suyas. En la demostración no se suben a ningún servidor; en producción irán a almacenamiento y se revisarán antes de publicarse.
 
 ## Eventos, calificaciones y comentarios

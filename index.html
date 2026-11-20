@@ -7,12 +7,15 @@
 <meta name="description" content="Explora restaurantes, cafés, tiendas y emprendimientos de Medellín en un mapa interactivo. Una plataforma de SONETIX.">
 <meta name="theme-color" content="#050505">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23050505'/%3E%3Cg fill='%23ff0a1e'%3E%3Crect x='6' y='13' width='4' height='8' rx='2'/%3E%3Crect x='12' y='7' width='4' height='18' rx='2'/%3E%3Crect x='18' y='11' width='4' height='12' rx='2'/%3E%3Crect x='24' y='9' width='3' height='14' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/style.css?v=19">
 </head>
 <body>
 
-<a class="skip" href="#explorar">Saltar al mapa</a>
+<a class="skip" href="#main">Saltar al contenido</a>
 
 <!-- ============ CABECERA ============ -->
 <header class="bar" id="bar">
@@ -21,7 +24,8 @@
     <span class="logo-t"><strong>Descubre Medellín</strong><small>by SONETIX</small></span>
   </a>
   <nav class="menu" id="menu" aria-label="Principal">
-    <a href="#explorar">Explorar</a>
+    <a href="#inicio" class="only-map">Inicio</a>
+    <a href="#/mapa" data-route="mapa">Mapa</a>
     <a href="#barrios">Barrios</a>
     <a href="#eventos">Eventos</a>
     <a href="#negocios">Para negocios</a>
@@ -38,43 +42,74 @@
   </div>
 </header>
 
-<main>
+<main id="main">
 
 <!-- ============ INICIO ============ -->
-<section class="hero" id="inicio">
-  <div class="hero-bg" aria-hidden="true">
-    <div class="glow g1"></div><div class="glow g2"></div>
-    <svg class="contours" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-      <g fill="none" stroke="currentColor" stroke-width="1">
-        <path d="M-20 420C120 380 200 450 330 410s210-120 330-90 170 70 190 60"/>
-        <path d="M-20 360C110 320 210 390 335 350s215-130 335-100 165 60 185 50"/>
-        <path d="M-20 300C100 262 220 330 340 290s220-140 340-110 160 50 180 40"/>
-        <path d="M-20 240C90 205 230 270 345 232s225-150 345-120 155 40 175 30"/>
-        <path d="M-20 180C80 148 240 210 350 175s230-160 350-130 150 30 170 20"/>
-      </g>
-    </svg>
-  </div>
-
-  <div class="hero-grid">
-  <div class="hero-in">
-    <p class="kicker rv"><span class="dot"></span> Mapa vivo de la ciudad</p>
-    <h1 class="rv">Medellín,<br><em>negocio por negocio.</em></h1>
-    <p class="hero-p rv">Explora restaurantes, cafés, tiendas y emprendimientos en un mapa interactivo. Descubre, guarda y visita lo mejor de cada barrio.</p>
+<section class="hero2" id="inicio">
+  <div class="wrap h2-in">
+    <p class="h2-tag rv"><span class="eq" aria-hidden="true"><b></b><b></b><b></b><b></b></span> Medellín · Negocios · Tecnología</p>
+    <h1 class="h2-title rv">Descubre Medellín,<br><em>negocio por negocio.</em></h1>
+    <div class="h2-row rv">
+      <p class="h2-p">Un mapa vivo de los negocios de la ciudad: restaurantes, cafés, tiendas y emprendimientos, con fotos, eventos y opiniones de otras personas.</p>
+      <div class="h2-cta">
+        <a class="btn btn-red btn-xl" href="#/mapa">Abrir el mapa <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-ghost btn-xl" href="#negocios">Quiero mi negocio aquí</a>
+      </div>
+    </div>
 
     <form class="search rv" id="heroSearch" role="search" autocomplete="off">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input id="heroQ" type="search" placeholder="Café, barrio o plan…" aria-label="Buscar negocios" aria-autocomplete="list" aria-controls="heroSug">
-      <button class="btn btn-red" type="submit">Explorar</button>
+      <input id="heroQ" type="search" placeholder="Busca un café, un barrio o un plan…" aria-label="Buscar negocios" aria-autocomplete="list" aria-controls="heroSug">
+      <button class="btn btn-red" type="submit">Buscar</button>
       <ul class="sug" id="heroSug" role="listbox" hidden></ul>
     </form>
-
     <div class="quick rv" id="quickCats" aria-label="Categorías rápidas"></div>
-
-    <dl class="stats rv" id="stats"></dl>
   </div>
 
-  <!-- ilustración del mapa (decorativa) -->
-  <div class="hero-art" id="heroArt" aria-hidden="true">
+  <div class="sky" id="sky">
+    <canvas id="skyCv" aria-hidden="true"></canvas>
+    <div class="sky-tags" id="skyTags"></div>
+    <p class="sky-hint" aria-hidden="true">Cada barra roja es un barrio. Tócala para abrir el mapa allí.</p>
+    <dl class="stats h2-stats" id="stats"></dl>
+  </div>
+</section>
+
+<!-- ============ CÓMO FUNCIONA ============ -->
+<section class="how" id="como">
+  <div class="wrap">
+    <header class="sec-head2">
+      <p class="kicker"><span class="dot"></span> Cómo funciona</p>
+      <h2>Tres pasos para encontrar tu próximo lugar favorito</h2>
+    </header>
+    <ol class="how-g">
+      <li class="how-c rv"><span class="how-n">01</span>
+        <svg viewBox="0 0 24 24" class="how-i" aria-hidden="true"><path d="M12 21s7-6.1 7-11a7 7 0 0 0-14 0c0 4.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        <h3>Explora el mapa</h3><p>Filtra por categoría y barrio, inclina el mapa en 3D y mira qué hay a tu alrededor.</p></li>
+      <li class="how-c rv"><span class="how-n">02</span>
+        <svg viewBox="0 0 24 24" class="how-i" aria-hidden="true"><path d="M12 3l2.5 6 6 .5-4.6 4 1.4 6L12 16.5 6.7 19.5l1.4-6L3.500 9.500l6-.5L12 3z"/></svg>
+        <h3>Decide con información</h3><p>Fotos, horarios, eventos y las opiniones de otras personas en la ficha de cada negocio.</p></li>
+      <li class="how-c rv"><span class="how-n">03</span>
+        <svg viewBox="0 0 24 24" class="how-i" aria-hidden="true"><path d="M4 4h16v12H8l-4 4V4z"/></svg>
+        <h3>Visita o pide</h3><p>Escribe por WhatsApp, abre cómo llegar o comparte el negocio con un enlace.</p></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ VISTA PREVIA DEL MAPA ============ -->
+<section class="teaser" id="mapTeaser">
+  <div class="wrap teaser-g">
+    <div class="teaser-copy">
+      <p class="kicker"><span class="dot"></span> El mapa</p>
+      <h2>Todo Medellín en una sola pantalla</h2>
+      <p class="sec-p">El mapa tiene su propia pantalla, hecha para explorar sin distracciones: zonas por barrio, tarjetas al pasar el cursor, vista 3D y eventos resaltados.</p>
+      <ul class="ticks">
+        <li><b>Zonas por barrio</b> que se abren a negocios al acercarte.</li>
+        <li><b>Filtros rápidos</b> por categoría, horario, eventos y calificación.</li>
+        <li><b>Enlace directo</b> para compartir cualquier negocio.</li>
+      </ul>
+      <a class="btn btn-red btn-xl" href="#/mapa">Abrir el mapa <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <div class="hero-art" id="heroArt" aria-hidden="true">
     <div class="ha-stage">
       <div class="ha-map">
         <svg viewBox="0 0 480 420" class="ha-svg" preserveAspectRatio="xMidYMid slice">
@@ -117,12 +152,10 @@
     </div>
   </div>
   </div>
-
-  <a class="scroll-cue" href="#explorar" aria-label="Ir al mapa"><span></span></a>
 </section>
 
 <!-- ============ EXPLORAR (MAPA) ============ -->
-<section class="explorer-sec" id="explorar">
+<section class="explorer-sec screen-map" id="explorar" aria-label="Mapa de negocios">
   <div class="sec-head wrap">
     <p class="kicker"><span class="dot"></span> Explorar</p>
     <h2>El mapa es el centro de todo</h2>
@@ -397,6 +430,6 @@
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="js/data.js?v=3"></script>
-<script src="js/app.js?v=20"></script>
+<script src="js/app.js?v=21"></script>
 </body>
 </html>

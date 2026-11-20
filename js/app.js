@@ -321,7 +321,12 @@
       map.addControl(geo, 'top-right');
       geo.on('error', () => toast('No pudimos acceder a tu ubicación. Revisa el permiso del navegador.'));
       map.on('style.load', addLayers);
-      map.on('load', () => { map.resize(); fit(false); if (!reduceMotion) requestAnimationFrame(pulse); });
+      map.on('load', () => {
+        map.resize();
+        const sb = BIZ[state.selected];
+        if (sb) map.jumpTo({ center: [sb.lng, sb.lat], zoom: 15.3 }); else fit(false);
+        if (!reduceMotion) requestAnimationFrame(pulse);
+      });
       if ('ResizeObserver' in window) new ResizeObserver(() => map.resize()).observe($('#map'));
 
       let mvT;
@@ -430,7 +435,7 @@
     }).join('');
   }
 
-  const goExplorer = () => $('#explorar').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+  const goExplorer = () => openMap();
 
   function bindFilters() {
     $('#catChips').addEventListener('click', e => {
@@ -608,7 +613,7 @@
     if (map) map.easeTo({ center: [b.lng, b.lat], zoom: Math.max(map.getZoom(), 15.3), duration: reduceMotion ? 0 : 800 });
     lastFocus = document.activeElement;
     ficha.innerHTML = fichaHTML(b);
-    try { history.replaceState(null, '', '#n=' + id); } catch { /* sin historial */ }
+    try { history.replaceState(null, '', '#/mapa/' + id); } catch { /* sin historial */ }
     ficha.scrollTop = 0;
     ficha.classList.add('open'); ficha.setAttribute('aria-hidden', 'false');
     if (isMobile()) sheetBg.hidden = false;
@@ -618,7 +623,7 @@
   function closeFicha() {
     if (!state.selected && !ficha.classList.contains('open')) return;
     state.selected = null;
-    if (location.hash.startsWith('#n=')) { try { history.replaceState(null, '', location.pathname + location.search); } catch { /* ignorar */ } }
+    if (/^#(\/mapa\/|n=)/.test(location.hash)) { try { history.replaceState(null, '', location.pathname + location.search + '#/mapa'); } catch { /* ignorar */ } }
     ficha.classList.remove('open'); ficha.setAttribute('aria-hidden', 'true'); sheetBg.hidden = true;
     if (map && map.getSource('sel')) map.getSource('sel').setData(selFC());
     $$('#list .card.on').forEach(c => c.classList.remove('on'));
@@ -651,7 +656,7 @@
       a.setAttribute('aria-pressed', on); a.setAttribute('aria-label', on ? 'Quitar de guardados' : 'Guardar negocio');
       toast(on ? 'Guardado en tu lista' : 'Quitado de tu lista');
     } else if (a.dataset.act === 'share' && b) {
-      const url = location.origin + location.pathname + '#n=' + b.id;
+      const url = location.origin + location.pathname + '#/mapa/' + b.id;
       copyText(url).then(() => toast('Enlace copiado. Quien lo abra verá este negocio.'), () => toast('No se pudo copiar. El enlace es: ' + url));
     } else if (a.dataset.act === 'wa') toast('Demostración: aquí se abre el WhatsApp del negocio.');
     else if (a.dataset.act === 'claim' && b) openClaim(b);
@@ -1048,13 +1053,13 @@
     els.forEach((el, i) => { el.style.transitionDelay = (i % 4) * 70 + 'ms'; io.observe(el); });
   }
 
-  /* ---------- pulido: inicio, menú activo, contadores ---------- */
+  /* ---------- portada: horizonte de barras, contadores y menú activo ---------- */
   function heroFx() {
-    const hero = $('#inicio'), art = $('#heroArt');
-    $('#heroCount').textContent = BUSINESSES.length + ' negocios';
-    if (art && !reduceMotion && matchMedia('(pointer: fine)').matches) {
-      hero.addEventListener('pointermove', e => {
-        const r = hero.getBoundingClientRect();
+    const tz = $('#mapTeaser'), art = $('#heroArt');
+    const hc = $('#heroCount'); if (hc) hc.textContent = BUSINESSES.length + ' negocios';
+    if (tz && art && !reduceMotion && matchMedia('(pointer: fine)').matches) {
+      tz.addEventListener('pointermove', e => {
+        const r = tz.getBoundingClientRect();
         art.firstElementChild.style.setProperty('--mx', (((e.clientX - r.left) / r.width - 0.5) * 2).toFixed(3));
         art.firstElementChild.style.setProperty('--my', (((e.clientY - r.top) / r.height - 0.5) * 2).toFixed(3));
       }, { passive: true });
@@ -1066,17 +1071,109 @@
         const t = setInterval(() => { n = Math.min(end, n + step); dd.textContent = n; if (n >= end) clearInterval(t); }, 45);
       });
     }
+    skyline();
   }
+
+  /* El ecualizador de SONETIX convertido en el valle de Medellín: montañas a los lados, ciudad al centro.
+     Las barras rojas son los barrios; al tocarlas se abre el mapa en ese barrio. */
+  function skyline() {
+    const cv = $('#skyCv'), box = $('#sky'), tagsEl = $('#skyTags');
+    if (!cv || !box) return;
+    const ctx = cv.getContext('2d');
+    let W = 0, H = 0, dpr = 1, bars = [], mx = -1, hot = -1, col = {}, vis = true;
+    const rnd = i => { const x = Math.sin(i * 12.9898 + 7.233) * 43758.5453; return x - Math.floor(x); };
+    const pickColors = () => {
+      const cs = getComputedStyle(document.documentElement), v = (n, d) => cs.getPropertyValue(n).trim() || d;
+      col = { gray: v('--ln2', '#34363f'), red: v('--red', '#ff0a1e'), redd: v('--redd', '#a0000f') };
+    };
+    function build() {
+      const r = box.getBoundingClientRect(); if (!r.width) return;
+      W = r.width; H = r.height; dpr = Math.min(window.devicePixelRatio || 1, 2);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+      const n = Math.max(24, Math.floor(W / (W < 700 ? 12 : 16)));
+      bars = [];
+      for (let i = 0; i < n; i++) {
+        const p = i / (n - 1), edge = Math.pow(Math.abs(p - 0.5) * 2, 1.7);
+        let h = 0.2 + 0.5 * edge + 0.06 * Math.sin(p * 9) + 0.05 * rnd(i);
+        if (rnd(i + 99) > 0.88) h += 0.14 + 0.1 * rnd(i + 5);
+        bars.push({ x: (i + 0.5) * (W / n), w: (W / n) * 0.62, h: Math.min(h, 0.86), ph: rnd(i + 31) * 6.28, zone: null });
+      }
+      const picks = BARRIOS.map((b, k) => ({ b, i: Math.round(((k + 0.5) / BARRIOS.length) * (n - 1)) }));
+      picks.forEach(({ b, i }) => { bars[i].zone = b; bars[i].h = Math.max(bars[i].h, 0.42 + 0.1 * rnd(i + 3)); });
+      tagsEl.innerHTML = picks.map(({ b, i }) => {
+        const cnt = BUSINESSES.filter(x => x.barrio === b.id).length;
+        return `<button class="sky-tag" type="button" data-id="${b.id}" data-i="${i}" style="left:${(bars[i].x / W * 100).toFixed(2)}%;bottom:calc(${(bars[i].h * 78).toFixed(1)}% + 14px)">${esc(b.name)}<small>${cnt}</small></button>`;
+      }).join('');
+      pickColors();
+    }
+    function draw(now) {
+      if (!W) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      const maxH = H * 0.78;
+      for (let i = 0; i < bars.length; i++) {
+        const b = bars[i];
+        let h = b.h * maxH;
+        if (!reduceMotion) h *= 1 + 0.045 * Math.sin(now / 900 + b.ph);
+        if (mx >= 0) { const d = Math.abs(b.x - mx) / (W * 0.1); if (d < 1) h += (1 - d) * (1 - d) * maxH * 0.22; }
+        if (b.zone && hot === i) h += maxH * 0.08;
+        const y = H - h, x = b.x - b.w / 2, r = Math.min(b.w / 2, 5);
+        const g = ctx.createLinearGradient(0, y, 0, H);
+        if (b.zone) { g.addColorStop(0, col.red); g.addColorStop(1, col.redd); ctx.shadowColor = col.red; ctx.shadowBlur = hot === i ? 26 : 12; }
+        else { g.addColorStop(0, col.gray); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.shadowBlur = 0; }
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.arcTo(x + b.w, y, x + b.w, y + r, r); ctx.lineTo(x + b.w, H); ctx.closePath(); ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    }
+    const loop = now => { if (vis) draw(now); requestAnimationFrame(loop); };
+    build(); draw(performance.now());
+    if (!reduceMotion) requestAnimationFrame(loop);
+    if ('IntersectionObserver' in window) new IntersectionObserver(es => { vis = es[0].isIntersecting; }, { threshold: 0 }).observe(box);
+    if ('ResizeObserver' in window) { let rt; new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(() => { build(); draw(performance.now()); }, 120); }).observe(box); }
+    new MutationObserver(() => { pickColors(); draw(performance.now()); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    box.addEventListener('pointermove', e => { mx = e.clientX - box.getBoundingClientRect().left; if (reduceMotion) draw(performance.now()); }, { passive: true });
+    box.addEventListener('pointerleave', () => { mx = -1; if (reduceMotion) draw(performance.now()); });
+    tagsEl.addEventListener('pointerover', e => { const t = e.target.closest('.sky-tag'); if (t) { hot = +t.dataset.i; if (reduceMotion) draw(performance.now()); } });
+    tagsEl.addEventListener('pointerout', e => { if (e.target.closest('.sky-tag')) { hot = -1; if (reduceMotion) draw(performance.now()); } });
+    tagsEl.addEventListener('click', e => {
+      const t = e.target.closest('.sky-tag'); if (!t) return;
+      const card = $(`#barriosGrid .barrio[data-id="${t.dataset.id}"]`); if (card) card.click();   // reutiliza el flujo de «barrios»
+    });
+  }
+
   function spy() {
     if (!('IntersectionObserver' in window)) return;
-    const links = $$('.menu a'), map2 = {};
-    links.forEach(a => { map2[a.getAttribute('href').slice(1)] = a; });
+    const links = $$('.menu a'), byId = {};
+    links.forEach(a => { byId[a.getAttribute('href').slice(1)] = a; });
     const io = new IntersectionObserver(es => es.forEach(en => {
-      if (en.isIntersecting) links.forEach(a => a.classList.toggle('on', a === map2[en.target.id]));
+      if (en.isIntersecting && !isMapView()) links.forEach(a => a.classList.toggle('on', a === byId[en.target.id]));
     }), { rootMargin: '-45% 0px -50% 0px' });
-    ['explorar', 'barrios', 'eventos', 'negocios', 'cotizar'].forEach(id => { const s = document.getElementById(id); if (s) io.observe(s); });
-    new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) links.forEach(a => a.classList.remove('on')); }), { rootMargin: '-45% 0px -50% 0px' }).observe($('#inicio'));
+    ['barrios', 'eventos', 'negocios', 'cotizar'].forEach(id => { const s = document.getElementById(id); if (s) io.observe(s); });
+    new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting && !isMapView()) links.forEach(a => a.classList.remove('on')); }), { rootMargin: '-45% 0px -50% 0px' }).observe($('#inicio'));
   }
+
+  /* ---------- pantallas: portada y mapa (ruta #/mapa) ---------- */
+  let mapStarted = false;
+  const isMapView = () => document.body.classList.contains('view-map');
+  const openMap = () => { if (location.hash.startsWith('#/mapa')) route(); else location.hash = '#/mapa'; };
+  function route() {
+    const h = location.hash, mm = /^#\/mapa(?:\/(\w+))?/.exec(h) || /^#n=(\w+)/.exec(h);
+    const wantMap = !!mm;
+    document.body.classList.toggle('view-map', wantMap);
+    $$('.menu a').forEach(a => a.classList.toggle('on', wantMap && a.dataset.route === 'mapa'));
+    menu.classList.remove('open'); burger.setAttribute('aria-expanded', 'false');
+    if (wantMap) {
+      window.scrollTo(0, 0);
+      if (!mapStarted) { mapStarted = true; initMap(); }
+      else if (map) setTimeout(() => map.resize(), 50);
+      const id = mm[1];
+      if (id && BIZ[id] && state.selected !== id) setTimeout(() => select(id, { from: 'list' }), map ? 100 : 900);
+    } else {
+      const el = h.length > 1 ? document.getElementById(decodeURIComponent(h.slice(1))) : null;
+      setTimeout(() => { if (el) el.scrollIntoView({ behavior: 'auto' }); else window.scrollTo(0, 0); }, 30);
+    }
+  }
+  addEventListener('hashchange', route);
 
   /* ---------- arranque ---------- */
   buildControls();
@@ -1086,7 +1183,5 @@
   syncUI();
   refresh();
   reveal();
-  initMap();
-  const dl = /[#&]n=(\w+)/.exec(location.hash);
-  if (dl && BIZ[dl[1]]) setTimeout(() => { goExplorer(); select(dl[1], { from: 'list' }); }, 1200);
+  route();
 })();
