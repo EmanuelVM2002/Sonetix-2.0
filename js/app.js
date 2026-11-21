@@ -67,6 +67,8 @@
   const evLabel = e => (e.d === 0 ? 'Hoy' : e.d === 1 ? 'Mañana' : fmtShort.format(evWhen(e)).replace('.', ''));
   const EVB = {};
   EVENTS.forEach(e => { (EVB[e.biz] = EVB[e.biz] || []).push(e); });
+  /* sin eventos publicados no mostramos los controles que los filtran o resaltan */
+  if (!EVENTS.length) document.documentElement.classList.add('no-events');
   Object.values(EVB).forEach(l => l.sort((a, b) => a.d - b.d));
   const EVT = Object.fromEntries(EVENT_TYPES.map(t => [t.id, t.label]));
   let myRev = {};
@@ -399,7 +401,7 @@
         <span class="thumb${b.webBy ? ' sx' : ''}${b.logo ? ' logo' : ''}">${b.logo ? `<img src="${esc(b.logo)}" alt="" loading="lazy">` : catIco(b.cat)}</span>
         <span class="card-t"><strong>${esc(b.name)}</strong>
           <small>${CATS[b.cat].label} · ${esc(BAR[b.barrio].name)}</small>
-          <span class="meta"><span class="${open ? 'open-b' : 'closed-b'}">${open ? 'Abierto' : 'Cerrado'}</span><span>${PRICE[b.price]}</span>${rt.n ? `<span class="rt">★ ${avgTxt(rt.avg)} <small>(${rt.n})</small></span>` : ''}${nev ? '<span class="evtag">Evento</span>' : ''}${b.claimed ? '' : '<span class="unc">Sin reclamar</span>'}${b.example ? '<span class="exm-t">Ejemplo</span>' : ''}</span>
+          <span class="meta"><span class="${open ? 'open-b' : 'closed-b'}">${open ? 'Abierto' : 'Cerrado'}</span><span>${PRICE[b.price]}</span>${rt.n ? `<span class="rt">★ ${avgTxt(rt.avg)} <small>(${rt.n})</small></span>` : ''}${nev ? '<span class="evtag">Evento</span>' : ''}${b.claimed ? '' : '<span class="unc">Sin reclamar</span>'}</span>
         </span></button></li>`;
     }).join('');
   }
@@ -432,7 +434,7 @@
     $('#quickCats').innerHTML = CATEGORIES.slice(0, 6).map(c => `<button class="qchip" type="button" data-id="${c.id}">${catIco(c.id)}${c.label}</button>`).join('');
     const openNow = BUSINESSES.filter(isOpen).length;
     $('#stats').innerHTML = [
-      [BUSINESSES.length, 'Negocios'], [BARRIOS.length, 'Barrios'], [EVENTS.length, 'Eventos'], [openNow, 'Abiertos ahora']
+      [BUSINESSES.length, 'Negocios'], [BARRIOS.length, 'Barrios'], ...(EVENTS.length ? [[EVENTS.length, 'Eventos']] : []), [openNow, 'Abiertos ahora']
     ].map(([n, l]) => `<div><dt>${l}</dt><dd>${n}</dd></div>`).join('');
     $('#barriosGrid').innerHTML = BARRIOS.map((b, i) => {
       const n = BUSINESSES.filter(x => x.barrio === b.id).length;
@@ -612,7 +614,7 @@
           ${b.delivery ? `<div><svg class="ico" viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a1.700 1.700 0 1 0 0-.1zM17 19a1.700 1.700 0 1 0 0-.1z"/></svg><span>${esc(b.delivery)}</span></div>` : ''}
           ${b.ig ? `<div><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.500 6.500h.01"/></svg><span>@${esc(b.ig)}</span></div>` : ''}
         </div>
-        ${b.webBy ? `<div class="sx-badge"><span class="eq" aria-hidden="true"><b></b><b></b><b></b><b></b></span><span><strong>Sitio creado por SONETIX</strong>${b.real ? 'Cliente de SONETIX: esta es su página real.' : 'Un ejemplo de lo que podemos hacer por tu negocio.'}</span></div>` : ''}
+        ${b.webBy ? `<div class="sx-badge"><span class="eq" aria-hidden="true"><b></b><b></b><b></b><b></b></span><span><strong>Sitio creado por SONETIX</strong>Cliente de SONETIX: esta es su página real.</span></div>` : ''}
         <div class="f-act">
           ${b.wa ? `<a class="btn btn-red wide" href="${esc(bizWa(b))}" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>` : `<button class="btn btn-red wide" type="button" data-act="wa">Escribir por WhatsApp</button>`}
           ${b.web ? `<a class="btn btn-ghost" href="${esc(b.web)}" target="_blank" rel="noopener noreferrer">Sitio oficial</a>` : `<span></span>`}
@@ -625,7 +627,7 @@
         <div class="rev" id="revBlock">${reviewsHTML(b)}</div>
         ${b.claimed ? '' : `<div class="claim-box"><p><strong>Ficha sin reclamar.</strong> Solo mostramos datos públicos. Si este es tu negocio, reclámala gratis y completa fotos, horarios y enlaces.</p>
           <button class="btn btn-red" type="button" data-act="claim">Reclamar esta ficha</button></div>`}
-        <p class="note-demo">${b.real ? 'Información tomada del sitio oficial del negocio. La ubicación en el mapa es aproximada.' : 'Negocio de ejemplo, no existe en la realidad.'}</p>
+        <p class="note-demo">Información tomada del sitio oficial del negocio. La ubicación en el mapa es aproximada.</p>
       </div>`;
   }
 
@@ -1013,7 +1015,7 @@
   $('.plan-wrap').addEventListener('click', e => {
     const a = e.target.closest('[data-plan]'); if (!a) return;
     const f = $('#quoteForm');
-    if (a.dataset.plan === 'info') { f.service.value = 'Página web nueva'; f.msg.value = 'Me interesa el plan Sitio para mostrar información ($50.000 al mes).'; }
+    if (a.dataset.plan === 'info') { f.service.value = 'Página web nueva'; f.msg.value = 'Me interesa el plan Sitio para mostrar información (desde $80.000 al mes).'; }
     else { f.service.value = 'No estoy seguro, quiero asesoría'; f.msg.value = ''; }
     $('#cotizar').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
   });
@@ -1027,13 +1029,14 @@
   function renderEvents() {
     const fl = [['all', 'Todos'], ['today', 'Hoy'], ['week', 'Esta semana'], ...EVENT_TYPES.map(t => [t.id, t.label])];
     $('#evFilters').innerHTML = fl.map(([id, l]) => `<button class="chip" type="button" data-f="${id}" aria-pressed="${evFilter === id}">${l}</button>`).join('');
+    $('#evFilters').hidden = !EVENTS.length;
     const list = evList();
     $('#evGrid').innerHTML = list.length ? list.map(e => {
       const b = BIZ[e.biz], w = evWhen(e);
       return `<button class="evc rv in" type="button" data-ev="${e.id}"><span class="ev-d"><b>${fmtDayNum.format(w)}</b><i>${fmtMon.format(w).replace('.', '')}</i></span>
         <span class="ev-b"><em class="ev-t">${EVT[e.type] || 'Evento'}</em><strong>${esc(e.title)}</strong><small>${esc(b.name)} · ${esc(BAR[b.barrio].name)}</small>
         <span class="ev-m">${evLabel(e)} · ${e.time} · ${esc(e.price)}</span></span></button>`;
-    }).join('') : `<p class="ev-empty">No hay eventos con ese filtro. Prueba con «Todos».</p>`;
+    }).join('') : `<p class="ev-empty">${EVENTS.length ? 'No hay eventos con ese filtro. Prueba con «Todos».' : 'Todavía no hay eventos publicados. Si tu negocio hace eventos, publícalos gratis con el botón de abajo.'}</p>`;
   }
   function openEvent(id) {
     const e = EVENTS.find(x => x.id === id); if (!e) return;
@@ -1043,8 +1046,7 @@
       <p>${esc(e.desc)}</p>
       <p><strong>${esc(b.name)}</strong> · ${esc(BAR[b.barrio].name)}${rt.n ? ` · ★ ${avgTxt(rt.avg)} (${rt.n})` : ''}</p>
       <div class="row-a"><button class="btn btn-red" type="button" data-evmap="${b.id}">Ver el negocio en el mapa</button>
-        <a class="btn btn-ghost" href="${dest}" target="_blank" rel="noopener noreferrer">Cómo llegar</a></div>
-      <p class="note-demo">Evento de ejemplo para la demostración.</p>`);
+        <a class="btn btn-ghost" href="${dest}" target="_blank" rel="noopener noreferrer">Cómo llegar</a></div>`);
   }
   function openPublishEvent() {
     const min = new Intl.DateTimeFormat('sv-SE', BOG).format(new Date());
@@ -1083,6 +1085,36 @@
     els.forEach((el, i) => { el.style.transitionDelay = (i % 4) * 70 + 'ms'; io.observe(el); });
   }
 
+  /* Parallax por capas: el scroll y el cursor mueven cada capa a su propia velocidad (CSS lee --scy, --pmx, --pmy). */
+  function heroParallax() {
+    const hero = $('#inicio'); if (!hero || reduceMotion) return;
+    const fine = matchMedia('(pointer: fine)').matches;
+    let ty = 0, tx = 0, tsy = 0, cx = 0, cy = 0, csy = 0, raf = 0;
+    const set = (k, v) => hero.style.setProperty(k, v);
+    const visible = () => !document.body.classList.contains('view-map');
+    const frame = () => {
+      raf = 0;
+      cx += (tx - cx) * 0.085; cy += (ty - cy) * 0.085; csy += (tsy - csy) * 0.18;
+      set('--pmx', cx.toFixed(3)); set('--pmy', cy.toFixed(3)); set('--scy', csy.toFixed(1));
+      if (Math.abs(tx - cx) > 0.002 || Math.abs(ty - cy) > 0.002 || Math.abs(tsy - csy) > 0.4) raf = requestAnimationFrame(frame);
+    };
+    const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+    const onScroll = () => {
+      if (!visible()) return;
+      tsy = Math.min(Math.max(window.scrollY, 0), hero.offsetHeight * 1.3);
+      kick();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    if (fine) hero.addEventListener('pointermove', e => {
+      if (!visible()) return;
+      const r = hero.getBoundingClientRect();
+      tx = ((e.clientX - r.left) / r.width - 0.5) * 2; ty = ((e.clientY - r.top) / Math.max(r.height, 1) - 0.5) * 2;
+      kick();
+    }, { passive: true });
+    if (fine) hero.addEventListener('pointerleave', () => { tx = 0; ty = 0; kick(); });
+    onScroll();
+  }
+
   /* ---------- portada: horizonte de barras, contadores y menú activo ---------- */
   function heroFx() {
     const tz = $('#mapTeaser'), art = $('#heroArt');
@@ -1101,14 +1133,7 @@
         const t = setInterval(() => { n = Math.min(end, n + step); dd.textContent = n; if (n >= end) clearInterval(t); }, 45);
       });
     }
-    const hh = $('#inicio'), hm = $('.h2-map');
-    if (hh && hm && !reduceMotion && matchMedia('(pointer: fine)').matches) {
-      hh.addEventListener('pointermove', e => {
-        const r = hh.getBoundingClientRect();
-        hm.style.setProperty('--px', (((e.clientX - r.left) / r.width - 0.5) * 2).toFixed(3));
-        hm.style.setProperty('--py', (((e.clientY - r.top) / r.height - 0.5) * 2).toFixed(3));
-      }, { passive: true });
-    }
+    heroParallax();
     skyline();
   }
 

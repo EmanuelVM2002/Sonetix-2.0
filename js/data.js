@@ -1,14 +1,11 @@
 /* ============================================================
-   DATOS DE PARCHEA
+   DATOS DE SONETIX GO
 
-   · Negocios REALES (marcados `real: true`): El Coctelazo (6 sedes) y
-     Coctelazo & Perritos Gourmet (Provenza). La información sale de sus
-     sitios oficiales, creados por SONETIX: direcciones, horarios, WhatsApp
-     y carta. Las coordenadas son aproximadas (precisión de barrio): el
-     botón «Cómo llegar» abre Google Maps con ese punto.
-   · Negocios de EJEMPLO (marcados `example: true`): solo 5, para mostrar
-     cómo se ve una ficha sin reclamar, con y sin sitio, y con eventos.
-     No existen en la realidad.
+   Solo negocios REALES (`real: true`): El Coctelazo (6 sedes) y Coctelazo &
+   Perritos Gourmet (Provenza). La información sale de sus sitios oficiales,
+   creados por SONETIX: direcciones, horarios, WhatsApp y carta. Las
+   coordenadas son aproximadas (precisión de barrio): el botón «Cómo llegar»
+   abre Google Maps con ese punto.
    Cuando exista la base real (Supabase), este archivo se reemplaza.
    ============================================================ */
 
@@ -32,21 +29,11 @@ window.BARRIOS = [
   { id: "manrique",  name: "Manrique · Campo Valdés", lat: 6.2748, lng: -75.5559, zoom: 14.9, vibe: "Nororiente de Medellín" },
   { id: "castilla",  name: "Castilla",          lat: 6.2960, lng: -75.5690, zoom: 14.9, vibe: "Noroccidente de Medellín" },
   { id: "belen",     name: "Belén",             lat: 6.2160, lng: -75.6041, zoom: 14.4, vibe: "Comercio de barrio y emprendimientos" },
-  { id: "provenza",  name: "Provenza",          lat: 6.2093, lng: -75.5679, zoom: 15.2, vibe: "Calles arboladas, bares y cafés de autor" },
-  { id: "laureles",  name: "Laureles",          lat: 6.2447, lng: -75.5910, zoom: 14.8, vibe: "Barrio de vecinos, parques y restaurantes" },
-  { id: "centro",    name: "Centro",            lat: 6.2517, lng: -75.5636, zoom: 15.0, vibe: "Historia, comercio y cultura" }
+  { id: "provenza",  name: "Provenza",          lat: 6.2093, lng: -75.5679, zoom: 15.2, vibe: "Calles arboladas, bares y cafés de autor" }
 ];
 
-/* Horarios por defecto de los negocios de ejemplo. days: 0=domingo … 6=sábado. close > 24 = pasada la medianoche. */
-const H = {
-  cafe:    { days: [0,1,2,3,4,5,6], open: 7,  close: 19 },
-  belleza: { days: [1,2,3,4,5,6],   open: 9,  close: 19 },
-  libros:  { days: [1,2,3,4,5,6],   open: 10, close: 19 },
-  moda:    { days: [1,2,3,4,5,6],   open: 10, close: 20 },
-  ocio:    { days: [4,5,6,0],       open: 14, close: 25 }
-};
-
-/* Horario por día: { día: [abre, cierra] }. Los días que no aparecen, cerrado. */
+/* Horario por día: { día: [abre, cierra] } con 0=domingo … 6=sábado; cierra > 24 = pasada la medianoche.
+   Los días que no aparecen, cerrado. */
 const ADULT = "Venta de licor solo a mayores de 18 años. Disfruta con responsabilidad.";
 
 /* ---------------- NEGOCIOS REALES ---------------- */
@@ -136,26 +123,12 @@ window.BUSINESSES = [
     hours: { byDay: { 0: [18, 25], 2: [17, 24], 3: [17, 24], 4: [17, 25], 5: [18, 26], 6: [18, 26] } },
     hoursNote: "Lunes cerrado. Viernes y sábado cierran a las 2:00 a. m.",
     notice: ADULT, menu: PZ_MENU, photos: PZ_PHOTOS
-  },
-
-  /* ---- Solo 5 negocios de ejemplo (ficticios) ---- */
-  { id: "n9",  example: true, name: "Libros del Sur", cat: "libros", barrio: "provenza", lat: 6.21050, lng: -75.57110, price: 2, hours: H.libros, claimed: true, web: "https://example.com", webBy: null, ig: "librosdelsur",
-    desc: "Librería independiente con café y club de lectura mensual.", services: ["Club de lectura", "Pedidos especiales", "Café"] },
-  { id: "n12", example: true, name: "Café Primer Parque", cat: "cafe", barrio: "laureles", lat: 6.24430, lng: -75.59040, price: 1, hours: H.cafe, claimed: true, web: null, webBy: null, ig: null,
-    desc: "Café de barrio con mesas en la acera y postres caseros.", services: ["Para llevar", "Mesas al aire libre", "Postres"] },
-  { id: "n15", example: true, name: "Salón Calma", cat: "belleza", barrio: "laureles", lat: 6.24490, lng: -75.58880, price: 2, hours: H.belleza, claimed: false, web: null, webBy: null, ig: null,
-    desc: "Manicure, pedicure y cuidado facial.", services: [] },
-  { id: "n29", example: true, name: "Boutique Valentina", cat: "moda", barrio: "belen", lat: 6.21520, lng: -75.60250, price: 2, hours: H.moda, claimed: true, web: null, webBy: null, ig: "boutiquevalentina",
-    desc: "Ropa femenina para toda ocasión y tallas amplias.", services: ["Tallas amplias", "Ajustes", "Pedido por WhatsApp"] },
-  { id: "n26", example: true, name: "Galería Paso a Paso", cat: "ocio", barrio: "centro", lat: 6.25170, lng: -75.56140, price: 1, hours: H.ocio, claimed: true, web: "https://example.com", webBy: null, ig: "galeriapasoapaso",
-    desc: "Arte contemporáneo y talleres abiertos al público.", services: ["Exposiciones", "Talleres", "Entrada libre"] }
+  }
 ];
 
-
 /* ============================================================
-   EVENTOS DE EJEMPLO — d = días a partir de hoy (siempre próximos).
-   Solo para los negocios de ejemplo. Los negocios reales no tienen
-   eventos hasta que ellos mismos los publiquen.
+   EVENTOS — vacío hasta que los negocios publiquen los suyos (se revisan
+   antes de mostrarse). d = días a partir de hoy.
    ============================================================ */
 window.EVENT_TYPES = [
   { id: "musica",  label: "Música" },
@@ -163,21 +136,10 @@ window.EVENT_TYPES = [
   { id: "promo",   label: "Promociones" },
   { id: "taller",  label: "Talleres" },
   { id: "cultura", label: "Cultura" },
-  { id: "deporte", label: "Deportes" }
+  { id: "deporte", label: "Deportes" },
+  { id: "ocio",    label: "Planes" }
 ];
+window.EVENTS = [];
 
-window.EVENTS = [
-  { id: "e4",  biz: "n9",  d: 2, time: "18:30", type: "cultura", price: "Entrada libre",         title: "Club de lectura: cuentos de autores locales", desc: "Esta sesión leemos y conversamos sobre cuentos de escritores de la ciudad. Trae tu café y tu opinión." },
-  { id: "e10", biz: "n26", d: 7, time: "17:00", type: "cultura", price: "Entrada libre",         title: "Inauguración de exposición", desc: "Abrimos una nueva exposición de arte contemporáneo con la presencia de los artistas." },
-  { id: "e11", biz: "n29", d: 9, time: "15:00", type: "promo",   price: "Hasta 30 % de descuento", title: "Tarde de descuentos en nueva colección", desc: "Descuentos escalonados en la nueva colección y ajustes gratis el mismo día." }
-];
-window.EVENT_TYPES.push({ id: "ocio", label: "Planes" });
-
-/* ============================================================
-   RESEÑAS DE EJEMPLO — solo para un negocio de ejemplo, para mostrar
-   cómo se ve la sección. Se marcan siempre como «Ejemplo». Las reseñas
-   reales llegarán de usuarios con cuenta y pasarán por moderación.
-   ============================================================ */
-window.REVIEWS_SEED = [
-  { biz: "n9", stars: 5, name: "Visitante de ejemplo", daysAgo: 9, text: "Librería con mucho encanto. El club de lectura es muy acogedor." }
-];
+/* RESEÑAS — vacío: las reseñas reales llegarán de usuarios y pasarán por moderación. */
+window.REVIEWS_SEED = [];

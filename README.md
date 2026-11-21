@@ -49,12 +49,12 @@ En el repositorio: Settings → Pages → Build and deployment → Source: «Dep
 - `admin.html`, `css/admin.css`, `js/admin.js`: panel administrativo.
 - `index.html`: estructura de todas las secciones.
 - `css/style.css`: paleta SONETIX (tokens al inicio), modo oscuro por defecto y modo claro.
-- `js/data.js`: negocios reales (El Coctelazo, 6 sedes, y Coctelazo & Perritos Gourmet, con `real: true`: horarios por día `hours.byDay`, WhatsApp `wa`, carta `menu`, fotos en `img/negocios/`) más 5 negocios de ejemplo (`example: true`), barrios, categorías y el número de WhatsApp de SONETIX (`SONETIX_WHATSAPP`, vacío).
+- `js/data.js`: negocios reales (El Coctelazo, 6 sedes, y Coctelazo & Perritos Gourmet, con `real: true`: horarios por día `hours.byDay`, WhatsApp `wa`, carta `menu`, fotos en `img/negocios/`), barrios, categorías y el número de WhatsApp de SONETIX (`SONETIX_WHATSAPP`, vacío).
 - `js/app.js`: mapa, filtros, buscador, fichas, modales, formularios y tema.
 
 ## Lo que es de demostración
 
-- Solo 5 negocios son inventados (`example: true`). Los reales salen de sus sitios oficiales; sus coordenadas son aproximadas (precisión de barrio).
+- Todos los negocios son reales y salen de sus sitios oficiales; sus coordenadas son aproximadas (precisión de barrio).
 - Los precios de los planes son de referencia, por confirmar.
 - Las solicitudes (cotización, reclamar ficha, retirar negocio) se guardan solo en el navegador (`localStorage`, clave `dm_leads`). No hay servidor.
 - La política de datos es un borrador pendiente de revisión legal.

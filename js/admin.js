@@ -1,5 +1,5 @@
 /* Panel SONETIX — prototipo sin servidor.
-   Datos de ejemplo derivados de js/data.js. Todo se guarda en localStorage (clave dm_admin).
+   Clientes derivados de js/data.js. Todo se guarda en localStorage (clave dm_admin).
    Regla de oro: ninguna etiqueta sobre la web de un negocio sin una medición registrada (fecha + herramienta). */
 (() => {
   'use strict';
@@ -53,12 +53,12 @@
     { k: 'year', l: 'Año del copyright en el pie', t: 'num', min: 2000, max: 2100 },
     { k: 'social', l: 'Depende solo de redes o Linktree', t: 'sel', o: YN }
   ];
-  const PLANS = { 'Sitio de información': [0, 50000], 'Plan superior (a cotizar)': [null, null] };
+  const PLANS = { 'Sitio de información': [0, 80000], 'Plan superior (a cotizar)': [null, null] };
   const LOST = ['No respondió', 'No es el momento', 'Precio', 'Ya tiene proveedor', 'Cerró el negocio', 'Otro'];
 
   /* ---------- datos ---------- */
   let P = [];
-  const save = () => store.set('dm_admin', JSON.stringify({ v: 2, prospects: P }));
+  const save = () => store.set('dm_admin', JSON.stringify({ v: 3, prospects: P }));
 
   function blank(o) {
     return Object.assign({
@@ -69,61 +69,22 @@
     }, o);
   }
 
+  /* Solo los clientes reales de SONETIX (sus sitios ya están entregados). Plan y valores se registran a mano. */
   function seed() {
     const t = today();
-    const rnd = (i, k) => { const x = Math.sin(i * 97.13 + k * 13.7) * 10000; return x - Math.floor(x); };
-    const clamp = (v, m) => Math.max(0, Math.min(m, v));
-    return BUSINESSES.map((b, i) => {
-      const r = k => rnd(i + 1, k);
+    return BUSINESSES.map(b => {
       const p = blank({
         id: b.id, name: b.name, cat: b.cat, barrio: b.barrio, lat: b.lat, lng: b.lng, ig: b.ig || '', web: b.web || '',
-        source: b.real ? 'Cliente de SONETIX' : 'Datos de ejemplo', sourceDate: t, created: t, phone: b.wa ? b.wa.replace(/^57/, '') : ''
+        source: 'Cliente de SONETIX', sourceDate: t, created: t, phone: b.wa ? b.wa.replace(/^57/, '') : ''
       });
-      if (b.real) {
-        p.status = 'cerrado'; p.maxStage = 5;
-        p.notes.push({ at: t, type: 'nota', text: 'Cliente real: sitio web entregado por SONETIX. Plan y valores por registrar.' });
-        return p;
-      }
-      p.notes.push({ at: t, type: 'nota', text: 'Registro creado desde los datos de ejemplo.' });
-      if (b.webBy) {
-        p.status = 'cerrado'; p.maxStage = 5; p.contactedAt = addDays(-40);
-        p.plan = 'Sitio de información';
-        [p.setup, p.monthly] = PLANS[p.plan];
-        p.notes.push({ at: addDays(-12), type: 'nota', text: 'Cliente de ejemplo: sitio entregado por SONETIX.' });
-        return p;
-      }
-      const noWeb = !b.web, v = r(1);
-      const st = v < .45 ? 'nuevo' : v < .65 ? 'contactado' : v < .78 ? 'respondio' : v < .87 ? 'reunion' : v < .93 ? 'propuesta' : v < .97 ? 'perdido' : 'nuevo';
-      p.status = st;
-      p.maxStage = st === 'perdido' ? 1 : Math.max(0, ORDER.indexOf(st));
-      if (p.maxStage >= 1) p.contactedAt = addDays(-(3 + Math.floor(r(2) * 12)));
-      if (st === 'perdido') p.lostReason = 'No respondió';
-      if (ACTIVE.includes(st) && st !== 'nuevo') p.next = { date: addDays(Math.floor(r(3) * 7) - 2), text: 'Dar seguimiento por WhatsApp' };
-      if (r(4) < .8) {
-        const f = (lo, hi, m) => clamp(Math.floor(lo + r(lo + hi) * (hi - lo)), m);
-        p.rubric = {
-          need: noWeb ? f(14, 25, 25) : f(4, 14, 25), growth: f(8, 20, 20), presence: f(5, 15, 15),
-          contact: f(6, 15, 15), diff: f(3, 10, 10), convert: f(5, 15, 15)
-        };
-      }
-      if (noWeb) {
-        p.signals.hasUrl = { value: 'no', date: t, tool: 'Revisión manual (ejemplo)' };
-        if (b.ig) p.signals.social = { value: 'si', date: t, tool: 'Revisión manual (ejemplo)' };
-      } else if (i % 3 === 0) {
-        const tool = 'PageSpeed (ejemplo)';
-        p.signals.hasUrl = { value: 'si', date: t, tool: 'Revisión manual (ejemplo)' };
-        p.signals.http = { value: 'si', date: t, tool };
-        p.signals.https = { value: 'si', date: t, tool };
-        p.signals.mobile = { value: i % 2 ? 'si' : 'no', date: t, tool };
-        p.signals.speed = { value: 40 + Math.floor(r(5) * 55), date: t, tool };
-        p.signals.year = { value: 2019 + Math.floor(r(6) * 7), date: t, tool };
-      }
+      p.status = 'cerrado'; p.maxStage = 5;
+      p.notes.push({ at: t, type: 'nota', text: 'Cliente: sitio web entregado por SONETIX. Plan y valores por registrar.' });
       return p;
     });
   }
 
   function load() {
-    try { const d = JSON.parse(store.get('dm_admin') || 'null'); if (d && d.v >= 2 && Array.isArray(d.prospects) && d.prospects.length) { P = d.prospects; return; } } catch { /* sembrar */ }
+    try { const d = JSON.parse(store.get('dm_admin') || 'null'); if (d && d.v >= 3 && Array.isArray(d.prospects) && d.prospects.length) { P = d.prospects; return; } } catch { /* sembrar */ }
     P = seed(); save();
   }
 
@@ -435,7 +396,7 @@
       const detail = l.type === 'cotizacion' ? `${esc(l.name)} · ${esc(l.phone)} · ${esc(l.service)}${l.msg ? '<br>' + esc(l.msg) : ''}` : l.type === 'reclamo' ? `${esc(l.name)} · ${esc(l.phone)} · ${esc(l.role)}${l.photos ? ' · ' + l.photos + (l.photos === 1 ? ' foto' : ' fotos') + ' por revisar' : ''}` : l.type === 'evento' ? `${esc(l.name)} · ${esc(l.phone)}<br><b>${esc(l.title)}</b> · ${esc(l.date)} ${esc(l.time)}${l.desc ? '<br>' + esc(l.desc) : ''}` : l.type === 'reporte' ? `Reseña de «${esc(l.reviewer)}»: ${esc(l.text)}` : `Contacto: ${esc(l.contact)}`;
       return `<li class="lead ${l.handled ? 'done' : ''}"><div class="lh"><span class="tp ${l.type}">${LEAD_T[l.type] || l.type}</span><strong>${esc(l.biz)}</strong><p>${detail}</p><p>${new Date(l.at).toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'medium', timeStyle: 'short' })}${l.handled ? ' · atendida' : ''}</p></div>
         <div class="la">${l.handled ? '' : `<button class="btn btn-red btn-sm" type="button" data-lead="apply" data-i="${i}">${l.type === 'retiro' ? 'Aplicar retiro' : l.type === 'reclamo' ? 'Registrar reclamo' : l.type === 'evento' ? 'Registrar en el prospecto' : l.type === 'reporte' ? 'Marcar revisada' : 'Convertir en prospecto'}</button><button class="btn btn-ghost btn-sm" type="button" data-lead="done" data-i="${i}">Marcar atendida</button>`}<button class="btn btn-ghost btn-sm" type="button" data-lead="del" data-i="${i}">Eliminar</button></div></li>`;
-    }).join('') : `<li class="panelx empty-s">Aún no hay solicitudes. Envía una desde el <a href="index.html#cotizar">formulario público</a> o crea una de ejemplo.</li>`;
+    }).join('') : `<li class="panelx empty-s">Aún no hay solicitudes. Envía una desde el <a href="index.html#cotizar">formulario público</a>.</li>`;
     const O = P.filter(p => p.status === 'nocontactar');
     $('#optouts').innerHTML = O.length ? O.map(p => `<li><span><strong>${esc(p.name)}</strong> <small>· ${fmtD(p.optout && p.optout.at)} · ${esc(p.optout ? p.optout.reason : '')}</small></span><span class="row-a"><button class="btn btn-ghost btn-sm" type="button" data-open="${p.id}">Ver ficha</button></span></li>`).join('') : `<li class="muted">Nadie en la lista por ahora.</li>`;
   }
@@ -470,11 +431,6 @@
     else if (b.dataset.lead === 'del') { L.splice(i, 1); putLeads(L); render(); }
   });
   $('#optouts').addEventListener('click', e => { const o = e.target.closest('[data-open]'); if (o) openDrawer(o.dataset.open); });
-  $('#demoLead').addEventListener('click', () => {
-    const L = getLeads(); L.push({ type: 'cotizacion', name: 'Camila Restrepo', biz: 'Panadería Lunita', phone: '573001112233', service: 'Carta o menú digital', msg: 'Quiero mostrar mi carta con fotos.', at: new Date().toISOString() });
-    putLeads(L); render(); toast('Solicitud de ejemplo creada.');
-  });
-
   /* ---------- FICHA LATERAL ---------- */
   const drawer = $('#drawer'), dBg = $('#dBg');
   let cur = null, dirty = false, lastFocus = null;
@@ -649,8 +605,8 @@
     });
   }
   $('#resetBtn').addEventListener('click', () => {
-    if (!confirm('Esto borra los cambios y vuelve a los datos de ejemplo. ¿Continuar?')) return;
-    P = seed(); save(); render(); toast('Datos de ejemplo restaurados.');
+    if (!confirm('Esto borra los cambios y vuelve a la lista inicial de clientes. ¿Continuar?')) return;
+    P = seed(); save(); render(); toast('Lista inicial restaurada.');
   });
   document.addEventListener('click', e => { const o = e.target.closest('#tab-resumen [data-open]'); if (o) openDrawer(o.dataset.open); });
 

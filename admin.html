@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>Panel SONETIX · Prospectos</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-<link rel="stylesheet" href="css/style.css?v=26">
+<link rel="stylesheet" href="css/style.css?v=34">
 <link rel="stylesheet" href="css/admin.css?v=3">
 </head>
 <body class="adm">
@@ -33,13 +33,13 @@
 
 <main class="main">
   <div class="warn-bar" role="note">
-    <b>Prototipo sin inicio de sesión.</b> Los datos son de ejemplo y se guardan solo en este navegador. En producción este panel va protegido (Supabase Auth + permisos por fila) y nunca público.
+    <b>Prototipo sin inicio de sesión.</b> Los datos se guardan solo en este navegador. En producción este panel va protegido (Supabase Auth + permisos por fila) y nunca público.
   </div>
 
   <!-- ================= RESUMEN ================= -->
   <section class="tab on" id="tab-resumen" aria-labelledby="h-resumen">
     <header class="tab-h"><div><h1 id="h-resumen">Resumen</h1><p>Cómo van los prospectos, el embudo y las ventas de SONETIX.</p></div>
-      <div class="tab-act"><button class="btn btn-ghost btn-sm" id="resetBtn" type="button">Reiniciar datos de ejemplo</button></div></header>
+      <div class="tab-act"><button class="btn btn-ghost btn-sm" id="resetBtn" type="button">Restablecer clientes</button></div></header>
     <div class="sample-note" id="sampleNote" hidden></div>
     <div class="kpis" id="kpis"></div>
     <div class="two">
@@ -90,8 +90,7 @@
 
   <!-- ================= SOLICITUDES ================= -->
   <section class="tab" id="tab-solicitudes" aria-labelledby="h-sol">
-    <header class="tab-h"><div><h1 id="h-sol">Solicitudes</h1><p>Lo que llega del sitio público: cotizaciones, reclamos de ficha y retiros. Se leen del mismo navegador.</p></div>
-      <div class="tab-act"><button class="btn btn-ghost btn-sm" id="demoLead" type="button">Crear solicitud de ejemplo</button></div></header>
+    <header class="tab-h"><div><h1 id="h-sol">Solicitudes</h1><p>Lo que llega del sitio público: cotizaciones, reclamos de ficha y retiros. Se leen del mismo navegador.</p></div></header>
     <ul class="leads" id="leads"></ul>
     <div class="panelx" style="margin-top:22px"><h2>Registro «No contactar»</h2>
       <p class="fine" style="margin:0 0 10px">Estos negocios no se pueden contactar ni se generan mensajes para ellos. Se respeta siempre.</p>
@@ -114,7 +113,7 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="js/data.js?v=5"></script>
-<script src="js/admin.js?v=9"></script>
+<script src="js/data.js?v=6"></script>
+<script src="js/admin.js?v=11"></script>
 </body>
 </html>
